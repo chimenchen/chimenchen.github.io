@@ -272,7 +272,7 @@ async function load(module, imports) {
 
 async function init(input) {
     if (typeof input === 'undefined') {
-        input = new URL('index-a073dd66b5dac543_bg.wasm', import.meta.url);
+        input = new URL('index_bg.wasm', import.meta.url);
     }
     const imports = {};
     imports.wbg = {};
@@ -600,8 +600,8 @@ async function init(input) {
     imports.wbg.__wbindgen_throw = function(arg0, arg1) {
         throw new Error(getStringFromWasm0(arg0, arg1));
     };
-    imports.wbg.__wbindgen_closure_wrapper1432 = function(arg0, arg1, arg2) {
-        const ret = makeClosure(arg0, arg1, 383, __wbg_adapter_20);
+    imports.wbg.__wbindgen_closure_wrapper1431 = function(arg0, arg1, arg2) {
+        const ret = makeClosure(arg0, arg1, 381, __wbg_adapter_20);
         return addHeapObject(ret);
     };
     imports['./snippets/zhongwen-68cd9a41d17df1cd/zhongwen.js'] = __wbg_star0;
