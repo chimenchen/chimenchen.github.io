@@ -505,6 +505,10 @@ async function init(input) {
     imports.wbg.__wbg_select_807c07baffcf37d4 = function(arg0) {
         getObject(arg0).select();
     };
+    imports.wbg.__wbg_checked_e56aae074443629d = function(arg0) {
+        const ret = getObject(arg0).checked;
+        return ret;
+    };
     imports.wbg.__wbg_setchecked_e37cbc4fab363e71 = function(arg0, arg1) {
         getObject(arg0).checked = arg1 !== 0;
     };
@@ -517,6 +521,10 @@ async function init(input) {
     };
     imports.wbg.__wbg_setvalue_649eb7de76d4a493 = function(arg0, arg1, arg2) {
         getObject(arg0).value = getStringFromWasm0(arg1, arg2);
+    };
+    imports.wbg.__wbg_valueAsNumber_68b30a6b93c2d7d3 = function(arg0) {
+        const ret = getObject(arg0).valueAsNumber;
+        return ret;
     };
     imports.wbg.__wbg_newnoargs_e23b458e372830de = function(arg0, arg1) {
         const ret = new Function(getStringFromWasm0(arg0, arg1));
@@ -600,8 +608,8 @@ async function init(input) {
     imports.wbg.__wbindgen_throw = function(arg0, arg1) {
         throw new Error(getStringFromWasm0(arg0, arg1));
     };
-    imports.wbg.__wbindgen_closure_wrapper1431 = function(arg0, arg1, arg2) {
-        const ret = makeClosure(arg0, arg1, 381, __wbg_adapter_20);
+    imports.wbg.__wbindgen_closure_wrapper1448 = function(arg0, arg1, arg2) {
+        const ret = makeClosure(arg0, arg1, 388, __wbg_adapter_20);
         return addHeapObject(ret);
     };
     imports['./snippets/zhongwen-68cd9a41d17df1cd/zhongwen.js'] = __wbg_star0;
