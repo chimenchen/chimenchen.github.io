@@ -596,6 +596,18 @@ async function init(input) {
         const ret = getObject(arg0).valueOf();
         return ret;
     };
+    imports.wbg.__wbg_checked_e56aae074443629d = function(arg0) {
+        const ret = getObject(arg0).checked;
+        return ret;
+    };
+    imports.wbg.__wbg_valueAsNumber_68b30a6b93c2d7d3 = function(arg0) {
+        const ret = getObject(arg0).valueAsNumber;
+        return ret;
+    };
+    imports.wbg.__wbg_selectedIndex_5e40f99d0f8e3a3b = function(arg0) {
+        const ret = getObject(arg0).selectedIndex;
+        return ret;
+    };
     imports.wbg.__wbg_value_1c3c734b0e8a17cc = function(arg0, arg1) {
         const ret = getObject(arg1).value;
         const ptr0 = passStringToWasm0(ret, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
@@ -603,19 +615,7 @@ async function init(input) {
         getInt32Memory0()[arg0 / 4 + 1] = len0;
         getInt32Memory0()[arg0 / 4 + 0] = ptr0;
     };
-    imports.wbg.__wbg_valueAsNumber_68b30a6b93c2d7d3 = function(arg0) {
-        const ret = getObject(arg0).valueAsNumber;
-        return ret;
-    };
-    imports.wbg.__wbg_checked_e56aae074443629d = function(arg0) {
-        const ret = getObject(arg0).checked;
-        return ret;
-    };
-    imports.wbg.__wbg_selectedIndex_5e40f99d0f8e3a3b = function(arg0) {
-        const ret = getObject(arg0).selectedIndex;
-        return ret;
-    };
-    imports.wbg.__wbindgen_closure_wrapper1924 = function(arg0, arg1, arg2) {
+    imports.wbg.__wbindgen_closure_wrapper1909 = function(arg0, arg1, arg2) {
         const ret = makeClosure(arg0, arg1, 51, __wbg_adapter_20);
         return addHeapObject(ret);
     };
