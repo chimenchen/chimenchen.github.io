@@ -498,6 +498,13 @@ async function init(input) {
         const ret = getObject(arg0) instanceof Window;
         return ret;
     };
+    imports.wbg.__wbg_value_1c3c734b0e8a17cc = function(arg0, arg1) {
+        const ret = getObject(arg1).value;
+        const ptr0 = passStringToWasm0(ret, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        getInt32Memory0()[arg0 / 4 + 1] = len0;
+        getInt32Memory0()[arg0 / 4 + 0] = ptr0;
+    };
     imports.wbg.__wbg_getItem_eb6e17b18b890a47 = function() { return handleError(function (arg0, arg1, arg2, arg3) {
         const ret = getObject(arg1).getItem(getStringFromWasm0(arg2, arg3));
         var ptr0 = isLikeNone(ret) ? 0 : passStringToWasm0(ret, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
@@ -608,14 +615,7 @@ async function init(input) {
         const ret = getObject(arg0).selectedIndex;
         return ret;
     };
-    imports.wbg.__wbg_value_1c3c734b0e8a17cc = function(arg0, arg1) {
-        const ret = getObject(arg1).value;
-        const ptr0 = passStringToWasm0(ret, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-        const len0 = WASM_VECTOR_LEN;
-        getInt32Memory0()[arg0 / 4 + 1] = len0;
-        getInt32Memory0()[arg0 / 4 + 0] = ptr0;
-    };
-    imports.wbg.__wbindgen_closure_wrapper1909 = function(arg0, arg1, arg2) {
+    imports.wbg.__wbindgen_closure_wrapper1916 = function(arg0, arg1, arg2) {
         const ret = makeClosure(arg0, arg1, 51, __wbg_adapter_20);
         return addHeapObject(ret);
     };
