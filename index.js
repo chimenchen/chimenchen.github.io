@@ -615,7 +615,7 @@ async function init(input) {
         const ret = getObject(arg0).selectedIndex;
         return ret;
     };
-    imports.wbg.__wbindgen_closure_wrapper1916 = function(arg0, arg1, arg2) {
+    imports.wbg.__wbindgen_closure_wrapper1913 = function(arg0, arg1, arg2) {
         const ret = makeClosure(arg0, arg1, 51, __wbg_adapter_20);
         return addHeapObject(ret);
     };
