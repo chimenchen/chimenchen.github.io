@@ -603,19 +603,19 @@ async function init(input) {
         const ret = getObject(arg0).valueOf();
         return ret;
     };
-    imports.wbg.__wbg_checked_e56aae074443629d = function(arg0) {
-        const ret = getObject(arg0).checked;
-        return ret;
-    };
     imports.wbg.__wbg_valueAsNumber_68b30a6b93c2d7d3 = function(arg0) {
         const ret = getObject(arg0).valueAsNumber;
+        return ret;
+    };
+    imports.wbg.__wbg_checked_e56aae074443629d = function(arg0) {
+        const ret = getObject(arg0).checked;
         return ret;
     };
     imports.wbg.__wbg_selectedIndex_5e40f99d0f8e3a3b = function(arg0) {
         const ret = getObject(arg0).selectedIndex;
         return ret;
     };
-    imports.wbg.__wbindgen_closure_wrapper1913 = function(arg0, arg1, arg2) {
+    imports.wbg.__wbindgen_closure_wrapper1915 = function(arg0, arg1, arg2) {
         const ret = makeClosure(arg0, arg1, 51, __wbg_adapter_20);
         return addHeapObject(ret);
     };

@@ -149,8 +149,8 @@ export function espeakSpeakText(user_text) {
 
   tts.set_rate(Number(document.getElementById('rate').value));
   tts.set_pitch(Number(document.getElementById('pitch').value));
-  // tts.set_voice(document.getElementById('voice').value);
-  tts.set_voice('sit/ipa');
+  tts.set_voice(document.getElementById('voice').value);
+  // tts.set_voice('sit/ipa');
 
   var now = Date.now();
   chunkID = 0;
