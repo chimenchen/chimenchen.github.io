@@ -1087,15 +1087,15 @@ function __wbg_get_imports() {
         getDataViewMemory0().setInt32(arg0 + 4 * 0, ptr1, true);
     };
     imports.wbg.__wbindgen_closure_wrapper900 = function(arg0, arg1, arg2) {
-        const ret = makeMutClosure(arg0, arg1, 83, __wbg_adapter_42);
+        const ret = makeMutClosure(arg0, arg1, 84, __wbg_adapter_42);
         return addHeapObject(ret);
     };
     imports.wbg.__wbindgen_closure_wrapper2451 = function(arg0, arg1, arg2) {
-        const ret = makeMutClosure(arg0, arg1, 83, __wbg_adapter_45);
+        const ret = makeMutClosure(arg0, arg1, 84, __wbg_adapter_45);
         return addHeapObject(ret);
     };
     imports.wbg.__wbindgen_closure_wrapper3522 = function(arg0, arg1, arg2) {
-        const ret = makeClosure(arg0, arg1, 83, __wbg_adapter_48);
+        const ret = makeClosure(arg0, arg1, 84, __wbg_adapter_48);
         return addHeapObject(ret);
     };
     imports['./snippets/zhongwen-68cd9a41d17df1cd/zhongwen.js'] = __wbg_star0;
