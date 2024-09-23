@@ -1,0 +1,8 @@
+{
+  "routes": [
+    { "handle": "filesystem" },
+    { "src": "/yunpu", "dest": "/index.html" },
+    { "src": "/yunpu/(.*)", "dest": "/index.html" },
+    { "src": "/((?!.*\\.).*)$", "dest": "/index.html" }
+  ]
+}
