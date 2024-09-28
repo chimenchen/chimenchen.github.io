@@ -23,6 +23,7 @@
 
             this.tooltipShown = false;
             
+            this.graphRoamTimer = null;
             this.throttleTimer = null;
             this.throttleDelay = 100; // 100ms 的節流延遲
         }
@@ -47,30 +48,24 @@
             if (this.isLoading) return; // 如果已經在加載中，不要重複顯示
             this.isLoading = true;
             if (this.chart) {
+                const style = getComputedStyle(document.documentElement);
                 this.chart.showLoading({
-                    text: '數據加載中...',
-                    color: '#c23531',
-                    textColor: '#000',
-                    maskColor: 'rgba(255, 255, 255, 0.8)',
-                    zlevel: 0
+                    text: '數據加載中',
+                    textColor: style.getPropertyValue('--color-text-primary').trim(),
+                    maskColor: style.getPropertyValue('--color-background-translucent').trim(),
+                    zlevel: 0,
+                    fontSize: 14,
+                    showSpinner: true,
+                    spinnerRadius: 10,
+                    lineWidth: 3,
+                    color: style.getPropertyValue('--color-node-border-highlight').trim(),
                 });
             } else {
                 // 創建並顯示一個簡單的加載指示器
                 if (!this.loadingElement) {
                     this.loadingElement = document.createElement('div');
-                    this.loadingElement.style.cssText = `
-                    position: absolute;
-                    top: 0;
-                    left: 0;
-                    right: 0;
-                    bottom: 0;
-                    display: flex;
-                    justify-content: center;
-                    align-items: center;
-                    background-color: rgba(255, 255, 255, 0.8);
-                    z-index: 1000;
-                `;
-                    this.loadingElement.innerHTML = '<span style="color: #c23531;">數據加載中...</span>';
+                    this.loadingElement.className = 'loading-indicator';
+                    this.loadingElement.innerHTML = '<div class="spinner"></div><span>數據加載中</span>';
                     this.chartDom.style.position = 'relative';
                 }
                 if (!this.chartDom.contains(this.loadingElement)) {
@@ -190,24 +185,37 @@
         // 設置事件監聽器
         setupEventListeners() {
             this.chart.on('click', this.handleClick.bind(this));
-            this.chart.on('graphRoam', this.throttle(this.handleGraphRoam.bind(this), this.throttleDelay));
+            this.chart.on('graphRoam', this.throttledHandleGraphRoam.bind(this));
             this.chart.on('restore', this.handleRestore.bind(this));
             window.addEventListener('resize', this.throttle(this.handleResize.bind(this), this.throttleDelay));
         }
 
+        throttledHandleGraphRoam() {
+            if (this.graphRoamTimer) {
+                clearTimeout(this.graphRoamTimer);
+            }
+
+            this.graphRoamTimer = setTimeout(() => {
+                this.handleGraphRoam();
+            }, 50);
+        }
+
         // 處理圖表縮放事件
-        handleGraphRoam(params) {
+        handleGraphRoam() {
             const currentView = this.chart.getOption().series[0].zoom;
             if (currentView != null) {
-                this.currentZoom = currentView;
-                this.currentZoom = Math.max(this.minZoom, Math.min(this.maxZoom, this.currentZoom));
-                // console.log("graphRoam", params, "絕對縮放比例", this.currentZoom);
+                const prevZoom = this.currentZoom;
+                this.currentZoom = Math.max(this.minZoom, Math.min(this.maxZoom, currentView));
 
-                this.updateChartZoom(this.currentZoom);
+                if (this.currentZoom !== prevZoom) {
+                    this.updateChartZoom(this.currentZoom);
+                }
 
                 if (this.currentZoom === this.minZoom || this.currentZoom === this.maxZoom) {
                     console.log("已達到縮放極限");
                     // 可以添加視覺反饋
+                } else {
+                    console.log("縮放中", this.currentZoom);
                 }
             }
         }
@@ -358,7 +366,7 @@
         }
 
         handleClick(params) {
-            console.log("handleClick", params);
+            // console.log("handleClick", params);
         
             if (params.componentType === 'series') {
                 if (this.tooltipShown) {
