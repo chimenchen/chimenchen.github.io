@@ -24,19 +24,31 @@
         }
         }
         #splash {
-        position: fixed;
-        inset: 0;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: var(--color-background);
+        padding-top: 4rem;
+        transition: opacity 200ms ease, visibility 200ms;
+        -webkit-transition: opacity 200ms ease, visibility 200ms;
+        visibility: hidden;
+        opacity: 0;
         }
-        #splash div {
-        font-size: 1.2rem;
-        margin-bottom: 1rem;
+        body.loading #splash {
+        visibility: visible;
+        opacity: 1;
         }
-        progress {
-        width: 200px;
+        #splash > * {
+        width: 10rem;
+        max-width: 480px;
+        margin: 2rem auto;
+        display: block;
+        text-align: center;
+        }
+        body.loading > *:not(#splash) {
+        visibility: hidden;
         }
       </style>
       <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.2/dist/echarts.min.js"></script>

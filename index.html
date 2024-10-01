@@ -11,6 +11,7 @@
             --button-bg: #f0f0f0;
             --button-hover-bg: #e0e0e0;
             --button-active-bg: #d0d0d0;
+            --iframe-bg: #ffffff;
         }
 
         @media (prefers-color-scheme: dark) {
@@ -20,12 +21,15 @@
                 --button-bg: #333333;
                 --button-hover-bg: #444444;
                 --button-active-bg: #555555;
+                --iframe-bg: #222222;
             }
         }
         body {
             font-family: Arial, sans-serif;
             margin: 0;
             padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
         }
         .button-container {
             display: flex;
@@ -52,6 +56,19 @@
             width: 100%;
             height: calc(100vh - 22px);
             border: none;
+        }
+        #loading {
+            position: absolute;
+            top: 22px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: var(--iframe-bg);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 18px;
+            color: var(--text-color);
         }
     </style>
 </head>
