@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+  <html lang="zh">
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1">
+      <title>韻譜圖</title>
+      <link rel="stylesheet" href="/pure.css">
+      <link rel="stylesheet" href="/styles.css">
+      <style>
+        :root {
+        color-scheme: light dark;
+        }
+        body {
+        background-color: #fff;
+        color: #333;
+        margin: 0;
+        padding: 0;
+        font-family: Arial, sans-serif;
+        }
+        @media (prefers-color-scheme: dark) {
+        body {
+        background-color: #222;
+        color: #e0e0e0;
+        }
+        }
+        #splash {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        }
+        #splash div {
+        font-size: 1.2rem;
+        margin-bottom: 1rem;
+        }
+        progress {
+        width: 200px;
+        }
+      </style>
+      <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.2/dist/echarts.min.js"></script>
+      <script src="/js/yunpu_chart.js"></script>
+      <link rel="preload" href="/yunpu-web_bg.wasm" as="fetch" type="application/wasm" crossorigin="">
+      <link rel="modulepreload" href="/yunpu-web.js">
+      <script type="module">
+        import init from '/yunpu-web.js';
+        init('/yunpu-web_bg.wasm');
+      </script>
+      <base target="_parent">
+      </head>
+      <body class="loading">
+        <div id="splash">
+          <div>加載中……</div>
+          <progress></progress>
+        </div>
+      </body>
+</html>

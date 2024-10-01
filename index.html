@@ -1,26 +1,102 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>口口聲聲</title>
-    <link rel="stylesheet" href="/pure.css">
-    <link rel="stylesheet" href="/styles.css">
+    <style>
+         :root {
+            --bg-color: #ffffff;
+            --text-color: #000000;
+            --button-bg: #f0f0f0;
+            --button-hover-bg: #e0e0e0;
+            --button-active-bg: #d0d0d0;
+        }
 
-    <!-- <link rel="modulepreload" href="/js/espeakng.js"> -->
-    <script type="text/javascript" src="/js/espeakng.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.2/dist/echarts.min.js"></script>
-    <script src="js/yunpu_chart.js"></script>
-
-    <link rel="preload" href="/index_bg.wasm" as="fetch" type="application/wasm" crossorigin="">
-    <link rel="modulepreload" href="/index.js">
-    <script type="module">import init from '/index.js';init('/index_bg.wasm');</script>
-  </head>
-
-  <body class="loading">
-    <div id="splash">
-      <div>加載中……</div>
-      <progress></progress>
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg-color: #222222;
+                --text-color: #e0e0e0;
+                --button-bg: #333333;
+                --button-hover-bg: #444444;
+                --button-active-bg: #555555;
+            }
+        }
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        .button-container {
+            display: flex;
+            background-color: var(--button-bg);
+            padding: 2px;
+        }
+        button {
+            background-color: transparent;
+            border: none;
+            padding: 2px 6px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            color: var(--text-color);
+        }
+        button:hover {
+            background-color: var(--button-hover-bg);
+        }
+        button.active {
+            background-color: var(--button-active-bg);
+            font-weight: bold;
+        }
+        #app-container {
+            width: 100%;
+            height: calc(100vh - 22px);
+            border: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="button-container">
+        <button onclick="loadApp('duyin')" id="duyin-btn">口口聲聲</button>
+        <button onclick="loadApp('yunpu')" id="yunpu-btn">韻譜</button>
     </div>
-  </body>
+    <iframe id="app-container"></iframe>
+
+    <script>
+        function loadApp(app) {
+            const iframe = document.getElementById('app-container');
+            const duyinBtn = document.getElementById('duyin-btn');
+            const yunpuBtn = document.getElementById('yunpu-btn');
+
+            if (app === 'duyin') {
+                iframe.src = 'duyin.html';
+                duyinBtn.classList.add('active');
+                yunpuBtn.classList.remove('active');
+                document.title = '口口聲聲';
+                history.pushState(null, '', '#/duyin');
+            } else if (app === 'yunpu') {
+                iframe.src = 'yunpu.html';
+                yunpuBtn.classList.add('active');
+                duyinBtn.classList.remove('active');
+                document.title = '韻譜';
+                history.pushState(null, '', '#/yunpu');
+            }
+        }
+
+        function handleHashChange() {
+            const hash = window.location.hash;
+            if (hash === '#/yunpu') {
+                loadApp('yunpu');
+            } else {
+                loadApp('duyin');
+            }
+        }
+
+        // 监听hash变化
+        window.addEventListener('hashchange', handleHashChange);
+
+        // 初始加载时检查hash
+        handleHashChange();
+    </script>
+</body>
 </html>

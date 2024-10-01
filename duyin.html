@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+  <html lang="zh">
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1">
+      <title>口口聲聲</title>
+      <link rel="stylesheet" href="/pure.css">
+      <link rel="stylesheet" href="/styles.css">
+      <script src="/js/espeakng.js"></script>
+      <script src="/js/zhongwen_speak.js"></script>
+      <link rel="preload" href="/duyin-web_bg.wasm" as="fetch" type="application/wasm" crossorigin="">
+      <link rel="modulepreload" href="/duyin-web.js">
+      <script type="module">
+        import init from '/duyin-web.js';
+        init('/duyin-web_bg.wasm');
+      </script>
+      <base target="_parent">
+      </head>
+      <body class="loading">
+        <div id="splash">
+          <div>加載中……</div>
+          <progress></progress>
+        </div>
+      </body>
+</html>
