@@ -75,7 +75,7 @@
 <body>
     <div class="button-container">
         <button onclick="loadApp('duyin')" id="duyin-btn">口口聲聲</button>
-        <button onclick="loadApp('duyinzdic')" id="duyin-btn">口口聲聲（多方言）</button>
+        <button onclick="loadApp('duyinzdic')" id="duyinzdic-btn">口口聲聲（多方言）</button>
         <button onclick="loadApp('yunpu')" id="yunpu-btn">韻譜</button>
     </div>
     <iframe id="app-container"></iframe>
@@ -84,24 +84,28 @@
         function loadApp(app) {
             const iframe = document.getElementById('app-container');
             const duyinBtn = document.getElementById('duyin-btn');
+            const duyinzdicBtn = document.getElementById('duyinzdic-btn');
             const yunpuBtn = document.getElementById('yunpu-btn');
 
             if (app === 'duyin') {
                 iframe.src = 'duyin.html';
                 duyinBtn.classList.add('active');
+                duyinzdicBtn.classList.remove('active');
                 yunpuBtn.classList.remove('active');
                 document.title = '口口聲聲';
                 history.pushState(null, '', '#/duyin');
             } else if (app === 'duyinzdic') {
                 iframe.src = 'duyinzdic.html';
-                duyinBtn.classList.add('active');
+                duyinBtn.classList.remove('active');
+                duyinzdicBtn.classList.add('active');
                 yunpuBtn.classList.remove('active');
                 document.title = '口口聲聲（多方言）';
                 history.pushState(null, '', '#/duyinzdic');
             } else if (app === 'yunpu') {
                 iframe.src = 'yunpu.html';
-                yunpuBtn.classList.add('active');
                 duyinBtn.classList.remove('active');
+                duyinzdicBtn.classList.remove('active');
+                yunpuBtn.classList.add('active');
                 document.title = '韻譜';
                 history.pushState(null, '', '#/yunpu');
             }
