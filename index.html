@@ -75,6 +75,7 @@
 <body>
     <div class="button-container">
         <button onclick="loadApp('duyin')" id="duyin-btn">口口聲聲</button>
+        <button onclick="loadApp('duyinzdic')" id="duyin-btn">口口聲聲（多方言）</button>
         <button onclick="loadApp('yunpu')" id="yunpu-btn">韻譜</button>
     </div>
     <iframe id="app-container"></iframe>
@@ -91,6 +92,12 @@
                 yunpuBtn.classList.remove('active');
                 document.title = '口口聲聲';
                 history.pushState(null, '', '#/duyin');
+            } else if (app === 'duyinzdic') {
+                iframe.src = 'duyinzdic.html';
+                duyinBtn.classList.add('active');
+                yunpuBtn.classList.remove('active');
+                document.title = '口口聲聲（多方言）';
+                history.pushState(null, '', '#/duyinzdic');
             } else if (app === 'yunpu') {
                 iframe.src = 'yunpu.html';
                 yunpuBtn.classList.add('active');
@@ -104,6 +111,8 @@
             const hash = window.location.hash;
             if (hash === '#/yunpu') {
                 loadApp('yunpu');
+            } else if (hash === '#/duyinzdic') {
+                loadApp('duyinzdic');
             } else {
                 loadApp('duyin');
             }
