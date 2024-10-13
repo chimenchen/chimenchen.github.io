@@ -83,64 +83,87 @@ function initializeResize(layout, form, handle) {
 
 function initTooltips() {
     let tooltip = null;
-    let touchStartTime;
-    const touchDelay = 500; // 毫秒
+    let currentElement = null;
+    const showDelay = 200; // 顯示延遲，毫秒
+    let showTimeout;
 
-    function createTooltip(text) {
+    function createTooltip() {
         const div = document.createElement('div');
         div.className = 'custom-tooltip';
-        div.textContent = text;
         document.body.appendChild(div);
         return div;
     }
 
-    function showTooltip(e, element) {
-        const text = element.getAttribute('title') || element.getAttribute('data-tooltip');
+    function showTooltip(element) {
+        const text = element.getAttribute('data-tooltip') || element.getAttribute('title');
         if (!text) return;
 
         if (!tooltip) {
-            tooltip = createTooltip(text);
-        } else {
-            tooltip.textContent = text;
+            tooltip = createTooltip();
         }
+        tooltip.textContent = text;
 
         const rect = element.getBoundingClientRect();
         tooltip.style.left = `${rect.left}px`;
         tooltip.style.top = `${rect.bottom + 5}px`;
         tooltip.style.display = 'block';
+
+        // 暫時移除 title 屬性以禁用默認 tooltip
+        if (element.hasAttribute('title')) {
+            element.setAttribute('data-original-title', element.getAttribute('title'));
+            element.removeAttribute('title');
+        }
     }
 
     function hideTooltip() {
         if (tooltip) {
             tooltip.style.display = 'none';
         }
+        if (showTimeout) {
+            clearTimeout(showTimeout);
+        }
+        // 恢復 title 屬性
+        if (currentElement && currentElement.hasAttribute('data-original-title')) {
+            currentElement.setAttribute('title', currentElement.getAttribute('data-original-title'));
+            currentElement.removeAttribute('data-original-title');
+        }
     }
 
-    document.body.addEventListener('mouseover', function(e) {
+    function handleMouseEnter(e) {
         const target = e.target.closest('.zi, .yunduan, .author-name, .yunbu');
         if (target) {
-            showTooltip(e, target);
+            currentElement = target;
+            showTimeout = setTimeout(() => showTooltip(target), showDelay);
         }
-    });
+    }
 
-    document.body.addEventListener('mouseout', hideTooltip);
+    function handleMouseLeave() {
+        hideTooltip();
+        currentElement = null;
+    }
 
-    document.body.addEventListener('touchstart', function(e) {
-        touchStartTime = new Date().getTime();
-    });
-
-    document.body.addEventListener('touchend', function(e) {
-        const touchEndTime = new Date().getTime();
-        const touchDuration = touchEndTime - touchStartTime;
-
-        if (touchDuration < touchDelay) {
-            const target = e.target.closest('.zi, .yunduan, .author-name, .yunbu');
-            if (target) {
-                e.preventDefault(); // 防止觸發點擊事件
-                showTooltip(e, target);
+    function handleTouchStart(e) {
+        const target = e.target.closest('.zi, .yunduan, .author-name, .yunbu');
+        if (target) {
+            if (currentElement === target) {
+                hideTooltip();
+                currentElement = null;
             } else {
                 hideTooltip();
+                currentElement = target;
+                showTooltip(target);
             }
+            e.preventDefault(); // 防止觸發點擊事件
+        } else {
+            hideTooltip();
+            currentElement = null;
         }
-    });
+    }
+
+    document.body.addEventListener('mouseenter', handleMouseEnter, true);
+    document.body.addEventListener('mouseleave', handleMouseLeave, true);
+    document.body.addEventListener('touchstart', handleTouchStart);
 }
+
+// 在 DOM 加載完成後初始化 tooltips
+document.addEventListener('DOMContentLoaded', initTooltips);
