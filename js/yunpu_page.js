@@ -30,6 +30,7 @@ function startObserving() {
 
         // 開始觀察
         observer.observe(document.body, { childList: true, subtree: true });
+        initTooltips(); // 添加這一行
     } else {
         // 如果 body 還不存在，等待一段時間後再次嘗試
         setTimeout(startObserving, 50);
@@ -78,4 +79,68 @@ function initializeResize(layout, form, handle) {
 
     handle.addEventListener('mousedown', startResize);
     handle.addEventListener('touchstart', startResize);
+}
+
+function initTooltips() {
+    let tooltip = null;
+    let touchStartTime;
+    const touchDelay = 500; // 毫秒
+
+    function createTooltip(text) {
+        const div = document.createElement('div');
+        div.className = 'custom-tooltip';
+        div.textContent = text;
+        document.body.appendChild(div);
+        return div;
+    }
+
+    function showTooltip(e, element) {
+        const text = element.getAttribute('title') || element.getAttribute('data-tooltip');
+        if (!text) return;
+
+        if (!tooltip) {
+            tooltip = createTooltip(text);
+        } else {
+            tooltip.textContent = text;
+        }
+
+        const rect = element.getBoundingClientRect();
+        tooltip.style.left = `${rect.left}px`;
+        tooltip.style.top = `${rect.bottom + 5}px`;
+        tooltip.style.display = 'block';
+    }
+
+    function hideTooltip() {
+        if (tooltip) {
+            tooltip.style.display = 'none';
+        }
+    }
+
+    document.body.addEventListener('mouseover', function(e) {
+        const target = e.target.closest('.zi, .yunduan, .author-name, .yunbu');
+        if (target) {
+            showTooltip(e, target);
+        }
+    });
+
+    document.body.addEventListener('mouseout', hideTooltip);
+
+    document.body.addEventListener('touchstart', function(e) {
+        touchStartTime = new Date().getTime();
+    });
+
+    document.body.addEventListener('touchend', function(e) {
+        const touchEndTime = new Date().getTime();
+        const touchDuration = touchEndTime - touchStartTime;
+
+        if (touchDuration < touchDelay) {
+            const target = e.target.closest('.zi, .yunduan, .author-name, .yunbu');
+            if (target) {
+                e.preventDefault(); // 防止觸發點擊事件
+                showTooltip(e, target);
+            } else {
+                hideTooltip();
+            }
+        }
+    });
 }
