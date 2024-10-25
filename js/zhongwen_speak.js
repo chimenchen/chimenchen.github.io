@@ -265,7 +265,6 @@ function startObserving() {
 
       // 開始觀察
       observer.observe(document.body, { childList: true, subtree: true });
-      initTooltips(); // 添加這一行
   } else {
       // 如果 body 還不存在，等待一段時間後再次嘗試
       setTimeout(startObserving, 50);
