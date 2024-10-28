@@ -30,12 +30,17 @@
         }
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Helvetica Neue", "Arial", "Noto Sans", "Microsoft YaHei", "PingFang SC", "Hiragino Sans GB", "Heiti SC", sans-serif;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
             margin: 0;
             padding: 0;
+            overflow: hidden;
             background-color: var(--bg-color);
             color: var(--text-color);
         }
         .button-container {
+            flex: 0 0 auto;
             display: flex;
             background-color: var(--button-bg);
             padding: 2px;
@@ -57,8 +62,8 @@
             font-weight: bold;
         }
         #app-container {
+            flex: 1;
             width: 100%;
-            height: calc(100vh - 22px);
             border: none;
         }
         #loading {
