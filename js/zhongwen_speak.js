@@ -31,7 +31,7 @@ function PushAudioNode(context, start_callback, end_callback, buffer_size) {
   this.track_callbacks = new Map();
 }
 
-PushAudioNode.prototype.push = function(chunk) {
+PushAudioNode.prototype.push = function (chunk) {
   if (this.closed) {
     throw 'Cannot push more chunks after node was closed';
   }
@@ -44,18 +44,18 @@ PushAudioNode.prototype.push = function(chunk) {
   }
 }
 
-PushAudioNode.prototype.close = function() {
+PushAudioNode.prototype.close = function () {
   this.closed = true;
 }
 
-PushAudioNode.prototype.connect = function(dest) {
+PushAudioNode.prototype.connect = function (dest) {
   this.sinks.push(dest);
   if (this.samples_queue.length) {
     this._do_connect();
   }
 }
 
-PushAudioNode.prototype._do_connect = function() {
+PushAudioNode.prototype._do_connect = function () {
   if (this.connected) return;
   this.connected = true;
   for (var dest of this.sinks) {
@@ -64,19 +64,19 @@ PushAudioNode.prototype._do_connect = function() {
   this.scriptNode.onaudioprocess = this.handleEvent.bind(this);
 }
 
-PushAudioNode.prototype.disconnect = function() {
+PushAudioNode.prototype.disconnect = function () {
   this.scriptNode.onaudioprocess = null;
   this.scriptNode.disconnect();
   this.connected = false;
 }
 
-PushAudioNode.prototype.addTrackCallback = function(aTimestamp, aCallback) {
+PushAudioNode.prototype.addTrackCallback = function (aTimestamp, aCallback) {
   var callbacks = this.track_callbacks.get(aTimestamp) || [];
   callbacks.push(aCallback);
   this.track_callbacks.set(aTimestamp, callbacks);
 }
 
-PushAudioNode.prototype.handleEvent = function(evt) {
+PushAudioNode.prototype.handleEvent = function (evt) {
   if (!this.startTime) {
     this.startTime = evt.playbackTime;
     if (this.start_callback) {
@@ -128,89 +128,103 @@ PushAudioNode.prototype.handleEvent = function(evt) {
 
 /* Code specific to the demo */
 
-var ctx = new (window.AudioContext || window.webkitAudioContext)();
+// var ctx = new (window.AudioContext || window.webkitAudioContext)();
 var tts;
 var pusher;
 var pusher_buffer_size = 4096;
 var chunkID = 0;
 
-(function(window) {
+(function (window) {
   'use strict';
 
   class ZhongwenSpeech {
-      constructor() {
-          this.ctx = new (window.AudioContext || window.webkitAudioContext)();
-          this.tts = null;
-          this.pusher = null;
-          this.pusher_buffer_size = 4096;
-          this.chunkID = 0;
-      }
+    constructor() {
+      // 延遲創建 AudioContext，等待用戶交互
+      this.ctx = null;  // new (window.AudioContext || window.webkitAudioContext)();
+      this.tts = null;
+      this.pusher = null;
+      this.pusher_buffer_size = 4096;
+      this.chunkID = 0;
+    }
 
-      espeakInit() {
-          console.log('Creating eSpeakNG instance...');
-          this.tts = new eSpeakNG(
-              '/js/espeakng.worker.js',
-              function cb1() {
-                  // document.body.classList.remove('loading');
-              }
-          );
-          console.log('Creating eSpeakNG instance... done');
-      }
+    espeakInit() {
+      console.log('Creating eSpeakNG instance...');
+      this.tts = new eSpeakNG(
+        '/js/espeakng.worker.js',
+        function cb1() {
+          // document.body.classList.remove('loading');
+        }
+      );
+      console.log('Creating eSpeakNG instance... done');
+    }
 
-      espeakStopPlay() {
+    espeakStopPlay() {
+      if (this.pusher) {
+        this.pusher.disconnect();
+        this.pusher = null;
+      }
+    }
+
+    initAudioContext() {
+      if (!this.ctx) {
+        this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      // 如果 context 被暫停，嘗試恢復
+      if (this.ctx.state === 'suspended') {
+        this.ctx.resume();
+      }
+      return this.ctx;
+    }
+
+    espeakSpeakText(user_text) {
+      this.initAudioContext();
+
+      if (this.ctx.state === 'suspended') {
+        this.ctx.resume();
+      }
+      this.espeakStopPlay();
+
+      this.tts.set_rate(Number(document.getElementById('rate').value));
+      this.tts.set_pitch(Number(document.getElementById('pitch').value));
+      this.tts.set_voice(document.getElementById('voice').value);
+
+      // var now = Date.now();
+      this.chunkID = 0;
+
+      this.pusher = new PushAudioNode(
+        this.ctx,
+        () => {
+          //console.log('PushAudioNode started!', this.ctx.currentTime, this.pusher.startTime);
+        },
+        () => {
+          //console.log('PushAudioNode ended!', this.ctx.currentTime - this.pusher.startTime);
+        },
+        this.pusher_buffer_size
+      );
+      this.pusher.connect(this.ctx.destination);
+
+      // actual synthesis
+      this.tts.synthesize(
+        user_text,
+        (samples, events) => {
+          if (!samples) {
+            if (this.pusher) {
+              this.pusher.close();
+            }
+            return;
+          }
           if (this.pusher) {
-              this.pusher.disconnect();
-              this.pusher = null;
+            this.pusher.push(new Float32Array(samples));
+            ++this.chunkID;
           }
-      }
+        }
+      );
+    }
 
-      espeakSpeakText(user_text) {
-          if (this.ctx.state === 'suspended') {
-              this.ctx.resume();
-          }
-          this.espeakStopPlay();
-
-          this.tts.set_rate(Number(document.getElementById('rate').value));
-          this.tts.set_pitch(Number(document.getElementById('pitch').value));
-          this.tts.set_voice(document.getElementById('voice').value);
-
-          var now = Date.now();
-          this.chunkID = 0;
-
-          this.pusher = new PushAudioNode(
-              this.ctx,
-              () => {
-                  //console.log('PushAudioNode started!', this.ctx.currentTime, this.pusher.startTime);
-              },
-              () => {
-                  //console.log('PushAudioNode ended!', this.ctx.currentTime - this.pusher.startTime);
-              },
-              this.pusher_buffer_size
-          );
-          this.pusher.connect(this.ctx.destination);
-
-          // actual synthesis
-          this.tts.synthesize(
-              user_text,
-              (samples, events) => {
-                  if (!samples) {
-                      if (this.pusher) {
-                          this.pusher.close();
-                      }
-                      return;
-                  }
-                  if (this.pusher) {
-                      this.pusher.push(new Float32Array(samples));
-                      ++this.chunkID;
-                  }
-              }
-          );
-      }
-
-      espeakSpeakTextInTextarea() {
-          var user_text = document.getElementById('espeakText').value;
-          this.espeakSpeakText(user_text);
-      }
+    espeakSpeakTextInTextarea() {
+      var user_text = document.getElementById('espeakText').value;
+      this.espeakSpeakText(user_text);
+    }
   }
 
   // 創建 ZhongwenSpeech 實例
@@ -218,10 +232,10 @@ var chunkID = 0;
 
   // 公開 API
   window.zhongwen = {
-      espeakInit: zhongwenSpeech.espeakInit.bind(zhongwenSpeech),
-      espeakStopPlay: zhongwenSpeech.espeakStopPlay.bind(zhongwenSpeech),
-      espeakSpeakText: zhongwenSpeech.espeakSpeakText.bind(zhongwenSpeech),
-      espeakSpeakTextInTextarea: zhongwenSpeech.espeakSpeakTextInTextarea.bind(zhongwenSpeech)
+    espeakInit: zhongwenSpeech.espeakInit.bind(zhongwenSpeech),
+    espeakStopPlay: zhongwenSpeech.espeakStopPlay.bind(zhongwenSpeech),
+    espeakSpeakText: zhongwenSpeech.espeakSpeakText.bind(zhongwenSpeech),
+    espeakSpeakTextInTextarea: zhongwenSpeech.espeakSpeakTextInTextarea.bind(zhongwenSpeech)
   };
 
   // 為了向後兼容，保留全局函數
@@ -236,38 +250,38 @@ var chunkID = 0;
 function initResizeWhenReady() {
   const layout = document.querySelector('.main-layout');
   if (layout) {
-      const form = layout.querySelector('.left-column');
-      const handle = layout.querySelector('.resize-handle');
-      if (form && handle) {
-          initializeResize(layout, form, handle);
-      }
+    const form = layout.querySelector('.left-column');
+    const handle = layout.querySelector('.resize-handle');
+    if (form && handle) {
+      initializeResize(layout, form, handle);
+    }
   } else {
-      // 如果還沒有找到 .main-layout，等待一段時間後再次嘗試
-      setTimeout(initResizeWhenReady, 100);
+    // 如果還沒有找到 .main-layout，等待一段時間後再次嘗試
+    setTimeout(initResizeWhenReady, 100);
   }
 }
 
 function startObserving() {
   if (document.body) {
-      // 使用 MutationObserver 監聽 DOM 變化
-      const observer = new MutationObserver((mutations) => {
-          for (let mutation of mutations) {
-              if (mutation.type === 'childList') {
-                  const layout = document.querySelector('.main-layout');
-                  if (layout) {
-                      initResizeWhenReady();
-                      observer.disconnect(); // 停止觀察
-                      break;
-                  }
-              }
+    // 使用 MutationObserver 監聽 DOM 變化
+    const observer = new MutationObserver((mutations) => {
+      for (let mutation of mutations) {
+        if (mutation.type === 'childList') {
+          const layout = document.querySelector('.main-layout');
+          if (layout) {
+            initResizeWhenReady();
+            observer.disconnect(); // 停止觀察
+            break;
           }
-      });
+        }
+      }
+    });
 
-      // 開始觀察
-      observer.observe(document.body, { childList: true, subtree: true });
+    // 開始觀察
+    observer.observe(document.body, { childList: true, subtree: true });
   } else {
-      // 如果 body 還不存在，等待一段時間後再次嘗試
-      setTimeout(startObserving, 50);
+    // 如果 body 還不存在，等待一段時間後再次嘗試
+    setTimeout(startObserving, 50);
   }
 }
 
@@ -282,33 +296,33 @@ function initializeResize(layout, form, handle) {
   let startX, startWidth;
 
   function startResize(e) {
-      isResizing = true;
-      startX = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
-      startWidth = parseInt(document.defaultView.getComputedStyle(form).width, 10);
-      document.addEventListener('mousemove', resize);
-      document.addEventListener('touchmove', resize);
-      document.addEventListener('mouseup', stopResize);
-      document.addEventListener('touchend', stopResize);
-      e.preventDefault(); // 防止文本選擇和滾動
+    isResizing = true;
+    startX = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
+    startWidth = parseInt(document.defaultView.getComputedStyle(form).width, 10);
+    document.addEventListener('mousemove', resize);
+    document.addEventListener('touchmove', resize);
+    document.addEventListener('mouseup', stopResize);
+    document.addEventListener('touchend', stopResize);
+    e.preventDefault(); // 防止文本選擇和滾動
   }
 
   function resize(e) {
-      if (!isResizing) return;
-      const clientX = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
-      const width = startWidth + clientX - startX;
-      const maxWidth = layout.clientWidth * 0.8;
-      if (width > 200 && width < maxWidth) {
-          form.style.width = width + 'px';
-      }
+    if (!isResizing) return;
+    const clientX = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
+    const width = startWidth + clientX - startX;
+    const maxWidth = layout.clientWidth * 0.8;
+    if (width > 200 && width < maxWidth) {
+      form.style.width = width + 'px';
+    }
   }
 
   function stopResize() {
-      if (!isResizing) return;
-      isResizing = false;
-      document.removeEventListener('mousemove', resize);
-      document.removeEventListener('touchmove', resize);
-      document.removeEventListener('mouseup', stopResize);
-      document.removeEventListener('touchend', stopResize);
+    if (!isResizing) return;
+    isResizing = false;
+    document.removeEventListener('mousemove', resize);
+    document.removeEventListener('touchmove', resize);
+    document.removeEventListener('mouseup', stopResize);
+    document.removeEventListener('touchend', stopResize);
   }
 
   handle.addEventListener('mousedown', startResize);

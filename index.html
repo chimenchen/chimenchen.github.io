@@ -3,9 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#222222" media="(prefers-color-scheme: dark)">
+    <meta name="apple-mobile-web-app-capable" content="yes">
     <title>口口聲聲</title>
     <style>
-         :root {
+        :root {
             --bg-color: #ffffff;
             --text-color: #000000;
             --button-bg: #f0f0f0;
@@ -127,6 +131,95 @@
 
         // 初始加载时检查hash
         handleHashChange();
+
+        // PWA 更新管理
+        class PWAUpdater {
+            constructor() {
+                this.registration = null;
+                this.updateInterval = 60 * 60 * 1000; // 1小時檢查一次
+            }
+
+            async init() {
+                if ('serviceWorker' in navigator) {
+                    try {
+                        // 註冊 Service Worker
+                        this.registration = await navigator.serviceWorker.register('/sw.js');
+                        console.log('Service Worker 註冊成功');
+
+                        // 設置更新檢查
+                        this.setupUpdateChecking();
+                        // 監聽更新
+                        this.listenForUpdates();
+                    } catch (error) {
+                        console.error('Service Worker 註冊失敗:', error);
+                    }
+                }
+            }
+
+            setupUpdateChecking() {
+                // 頁面可見時檢查更新
+                document.addEventListener('visibilitychange', () => {
+                    if (document.visibilityState === 'visible') {
+                        this.checkForUpdates();
+                    }
+                });
+
+                // 定期檢查更新
+                setInterval(() => this.checkForUpdates(), this.updateInterval);
+            }
+
+            async checkForUpdates() {
+                if (this.registration) {
+                    try {
+                        await this.registration.update();
+                        console.log('檢查更新完成');
+                    } catch (error) {
+                        console.error('檢查更新失敗:', error);
+                    }
+                }
+            }
+
+            listenForUpdates() {
+                this.registration.addEventListener('updatefound', () => {
+                    const newWorker = this.registration.installing;
+                    
+                    newWorker.addEventListener('statechange', () => {
+                        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                            this.showUpdateNotification();
+                        }
+                    });
+                });
+            }
+
+            showUpdateNotification() {
+                const notification = document.createElement('div');
+                notification.style.cssText = `
+                    position: fixed;
+                    bottom: 20px;
+                    right: 20px;
+                    background: #4CAF50;
+                    color: white;
+                    padding: 16px;
+                    border-radius: 4px;
+                    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+                    z-index: 1000;
+                `;
+                notification.innerHTML = `
+                    <p style="margin: 0 0 10px 0">有新版本可用</p>
+                    <button onclick="window.location.reload()" 
+                            style="background: white; color: #4CAF50; border: none; padding: 5px 10px; cursor: pointer;">
+                        立即更新
+                    </button>
+                `;
+                document.body.appendChild(notification);
+            }
+        }
+
+        // 初始化 PWA 更新管理
+        window.addEventListener('load', () => {
+            const pwaUpdater = new PWAUpdater();
+            pwaUpdater.init();
+        });
     </script>
 </body>
 </html>

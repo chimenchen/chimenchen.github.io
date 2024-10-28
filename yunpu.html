@@ -58,7 +58,9 @@
       <link rel="modulepreload" href="/yunpu-web.js">
       <script type="module">
         import init from '/yunpu-web.js';
-        init('/yunpu-web_bg.wasm');
+        init({
+        url: '/yunpu-web_bg.wasm'
+        });
       </script>
       <base target="_parent">
       </head>

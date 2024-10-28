@@ -12,7 +12,9 @@
       <link rel="modulepreload" href="/duyin-web.js">
       <script type="module">
         import init from '/duyin-web.js';
-        init('/duyin-web_bg.wasm');
+        init({
+        url: '/duyin-web_bg.wasm'
+        });
       </script>
       <base target="_parent">
       </head>

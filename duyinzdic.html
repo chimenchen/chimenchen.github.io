@@ -12,7 +12,9 @@
       <link rel="modulepreload" href="/duyinzdic-web.js">
       <script type="module">
         import init from '/duyinzdic-web.js';
-        init('/duyinzdic-web_bg.wasm');
+        init({
+        url: '/duyinzdic-web_bg.wasm'
+        });
       </script>
       <base target="_parent">
       </head>
