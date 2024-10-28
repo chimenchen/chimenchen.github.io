@@ -1,4 +1,4 @@
-const CACHE_NAME = 'koushing-v1';
+const CACHE_NAME = `koukoushengsheng-${Date.now()}`;
 const urlsToCache = [
     '/',
     '/index.html',
@@ -37,21 +37,57 @@ const urlsToCache = [
 
 ];
 
+// 安裝新版本
 self.addEventListener('install', event => {
     event.waitUntil(
         caches.open(CACHE_NAME)
             .then(cache => cache.addAll(urlsToCache))
+            .then(() => self.skipWaiting()) // 強制激活新版本
     );
 });
 
-self.addEventListener('fetch', event => {
-    event.respondWith(
-        caches.match(event.request)
-            .then(response => {
-                if (response) {
-                    return response;
-                }
-                return fetch(event.request);
-            })
+// 激活時清理舊緩存
+self.addEventListener('activate', event => {
+    event.waitUntil(
+        Promise.all([
+            // 清理舊緩存
+            caches.keys().then(cacheNames => {
+                return Promise.all(
+                    cacheNames.map(cacheName => {
+                        if (cacheName !== CACHE_NAME) {
+                            console.log('刪除舊緩存:', cacheName);
+                            return caches.delete(cacheName);
+                        }
+                    })
+                );
+            }),
+            // 立即接管所有客戶端
+            self.clients.claim()
+        ])
     );
+});
+
+// 攔截請求
+self.addEventListener('fetch', event => {
+    // 對樣式文件使用網絡優先策略
+    if (event.request.url.endsWith('.css')) {
+        event.respondWith(
+            fetch(event.request)
+                .then(response => {
+                    // 更新緩存
+                    const clone = response.clone();
+                    caches.open(CACHE_NAME).then(cache => {
+                        cache.put(event.request, clone);
+                    });
+                    return response;
+                })
+                .catch(() => caches.match(event.request))
+        );
+    } else {
+        // 其他文件使用緩存優先策略
+        event.respondWith(
+            caches.match(event.request)
+                .then(response => response || fetch(event.request))
+        );
+    }
 });
