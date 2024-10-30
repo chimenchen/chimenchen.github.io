@@ -1,4 +1,4 @@
-const CACHE_VERSION = '1.0.5';
+const CACHE_VERSION = '1.0.6';
 const CACHE_NAME = `koukoushengsheng-${CACHE_VERSION}`;
 
 const urlsToCache = [
@@ -15,8 +15,7 @@ const urlsToCache = [
     '/espeak.html',
     '/js/demo.js',
 
-    '/pure.css',
-    '/styles.css',
+    '/duyin.css',
     '/js/espeakng.js',
     '/js/espeakng.worker.data',
     '/js/espeakng.worker.js',
