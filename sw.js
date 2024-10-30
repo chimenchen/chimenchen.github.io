@@ -1,4 +1,6 @@
-const CACHE_NAME = `koukoushengsheng-${Date.now()}`;
+const CACHE_VERSION = '1.0.2';
+const CACHE_NAME = `koukoushengsheng-${CACHE_VERSION}`;
+
 const urlsToCache = [
     '/',
     '/index.html',
@@ -41,8 +43,21 @@ const urlsToCache = [
 self.addEventListener('install', event => {
     event.waitUntil(
         caches.open(CACHE_NAME)
-            .then(cache => cache.addAll(urlsToCache))
-            .then(() => self.skipWaiting()) // 強制激活新版本
+            .then(cache => {
+                // 先檢查關鍵文件是否有更新
+                return Promise.all(
+                    urlsToCache.map(url => 
+                        fetch(url, { cache: 'no-cache' })  // 強制檢查網絡
+                            .then(response => {
+                                if (response.ok) {
+                                    return cache.put(url, response);
+                                }
+                                throw new Error(`Failed to fetch ${url}`);
+                            })
+                    )
+                );
+            })
+            .then(() => self.skipWaiting())
     );
 });
 
