@@ -102,7 +102,7 @@ function get選項列表() {
   ] : []);
 }
 
-const { 四等韻 } = TshetUinh.表達式;
+const 四等韻 = '齊先蕭青添韻';
 
 function 調整音韻地位() {
   function 調整(表達式, 調整屬性) { if (is(表達式)) 音韻地位 = 音韻地位.調整(調整屬性); }
