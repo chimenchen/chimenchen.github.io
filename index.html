@@ -92,6 +92,7 @@
         <button onclick="loadApp('duyin')" id="duyin-btn">口口聲聲</button>
         <button onclick="loadApp('duyinzdic')" id="duyinzdic-btn">口口聲聲（多方言）</button>
         <button onclick="loadApp('yunpu')" id="yunpu-btn">韻譜</button>
+        <button onclick="loadApp('evolution')" id="evolution-btn">演化圖</button>
     </div>
     <iframe id="app-container"></iframe>
 
@@ -101,12 +102,13 @@
             const duyinBtn = document.getElementById('duyin-btn');
             const duyinzdicBtn = document.getElementById('duyinzdic-btn');
             const yunpuBtn = document.getElementById('yunpu-btn');
-
+            const evolutionBtn = document.getElementById('evolution-btn');
             if (app === 'duyin') {
                 iframe.src = 'duyin.html';
                 duyinBtn.classList.add('active');
                 duyinzdicBtn.classList.remove('active');
                 yunpuBtn.classList.remove('active');
+                evolutionBtn.classList.remove('active');
                 document.title = '口口聲聲';
                 history.pushState(null, '', '#/duyin');
             } else if (app === 'duyinzdic') {
@@ -114,6 +116,7 @@
                 duyinBtn.classList.remove('active');
                 duyinzdicBtn.classList.add('active');
                 yunpuBtn.classList.remove('active');
+                evolutionBtn.classList.remove('active');
                 document.title = '口口聲聲（多方言）';
                 history.pushState(null, '', '#/duyinzdic');
             } else if (app === 'yunpu') {
@@ -121,8 +124,17 @@
                 duyinBtn.classList.remove('active');
                 duyinzdicBtn.classList.remove('active');
                 yunpuBtn.classList.add('active');
+                evolutionBtn.classList.remove('active');
                 document.title = '韻譜';
                 history.pushState(null, '', '#/yunpu');
+            } else if (app === 'evolution') {
+                iframe.src = 'evolution.html';
+                duyinBtn.classList.remove('active');
+                duyinzdicBtn.classList.remove('active');
+                yunpuBtn.classList.remove('active');
+                evolutionBtn.classList.add('active');
+                document.title = '演化圖';
+                history.pushState(null, '', '#/evolution');
             }
         }
 
@@ -132,6 +144,8 @@
                 loadApp('yunpu');
             } else if (hash === '#/duyinzdic') {
                 loadApp('duyinzdic');
+            } else if (hash === '#/evolution') {
+                loadApp('evolution');
             } else {
                 loadApp('duyin');
             }

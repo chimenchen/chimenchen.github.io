@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>演化圖</title>
+    <link rel="stylesheet" href="/evolution.css">
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <link rel="preload" href="/evolution-web_bg.wasm" as="fetch" type="application/wasm" crossorigin="">
+    <link rel="modulepreload" href="/evolution-web.js">
+    <script type="module">
+      import init from '/evolution-web.js';
+      init({
+      url: '/evolution-web_bg.wasm'
+      });
+    </script>
+    <base target="_parent">
+    </head>
+    <body>
+    </body>
+</html>
