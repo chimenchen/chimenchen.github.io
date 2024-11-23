@@ -1,4 +1,4 @@
-const CACHE_VERSION = '1.0.42';
+const CACHE_VERSION = '1.0.43';
 const CACHE_NAME = `koukoushengsheng-${CACHE_VERSION}`;
 
 const urlsToCache = [
