@@ -1,4 +1,4 @@
-const CACHE_VERSION = '1.0.50';
+const CACHE_VERSION = '1.0.51';
 const CACHE_NAME = `koukoushengsheng-${CACHE_VERSION}`;
 
 const urlsToCache = [
@@ -34,8 +34,11 @@ const urlsToCache = [
     '/js/yunpu_page.js',
     '/js/yunpu_chart.js',
 
-    '/favicon.ico',
+    '/evolution.html',
+    '/evolution-web.js',
+    '/evolution-web_bg.wasm',
 
+    '/favicon.ico',
 ];
 
 // 安裝新版本
