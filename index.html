@@ -85,78 +85,111 @@
             font-size: 18px;
             color: var(--text-color);
         }
+        /* 添加加載提示樣式 */
+        #splash {
+            position: absolute;
+            top: 22px; /* 按鈕容器高度 */
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: var(--bg-color);
+            padding-top: 4rem;
+            transition: opacity 200ms ease, visibility 200ms;
+            -webkit-transition: opacity 200ms ease, visibility 200ms;
+            visibility: hidden;
+            opacity: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2rem;
+        }
+
+        body.loading #splash {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        #splash > * {
+            width: 10rem;
+            max-width: 480px;
+            display: block;
+            text-align: center;
+        }
+
+        body.loading > *:not(#splash):not(.button-container) {
+            visibility: hidden;
+        }
     </style>
 </head>
 <body>
-    <div class="button-container">
-        <button onclick="loadApp('duyin')" id="duyin-btn">口口聲聲</button>
-        <button onclick="loadApp('duyinzdic')" id="duyinzdic-btn">口口聲聲（多方言）</button>
-        <button onclick="loadApp('yunpu')" id="yunpu-btn">韻譜</button>
-        <button onclick="loadApp('evolution')" id="evolution-btn">演化圖</button>
+    <div class="button-container" id="app-buttons">
+        <!-- 按鈕將通過 JavaScript 動態生成 -->
     </div>
     <iframe id="app-container"></iframe>
+    <div id="splash">
+        <div>加載中……</div>
+        <progress></progress>
+    </div>
 
     <script>
-        function loadApp(app) {
+        // 應用配置
+        const apps = [
+            { id: 'duyin', title: '口口聲聲', path: 'duyin.html' },
+            { id: 'duyinzdic', title: '口口聲聲（多方言）', path: 'duyinzdic.html' },
+            { id: 'yunpu', title: '韻譜', path: 'yunpu.html' },
+            { id: 'evolution', title: '演化圖', path: 'evolution.html' }
+        ];
+
+        // 動態生成按鈕
+        function createButtons() {
+            const container = document.getElementById('app-buttons');
+            apps.forEach(app => {
+                const button = document.createElement('button');
+                button.id = `${app.id}-btn`;
+                button.textContent = app.title;
+                button.onclick = () => loadApp(app.id);
+                container.appendChild(button);
+            });
+        }
+
+        function loadApp(appId) {
             const iframe = document.getElementById('app-container');
-            const duyinBtn = document.getElementById('duyin-btn');
-            const duyinzdicBtn = document.getElementById('duyinzdic-btn');
-            const yunpuBtn = document.getElementById('yunpu-btn');
-            const evolutionBtn = document.getElementById('evolution-btn');
-            if (app === 'duyin') {
-                iframe.src = 'duyin.html';
-                duyinBtn.classList.add('active');
-                duyinzdicBtn.classList.remove('active');
-                yunpuBtn.classList.remove('active');
-                evolutionBtn.classList.remove('active');
-                document.title = '口口聲聲';
-                history.pushState(null, '', '#/duyin');
-            } else if (app === 'duyinzdic') {
-                iframe.src = 'duyinzdic.html';
-                duyinBtn.classList.remove('active');
-                duyinzdicBtn.classList.add('active');
-                yunpuBtn.classList.remove('active');
-                evolutionBtn.classList.remove('active');
-                document.title = '口口聲聲（多方言）';
-                history.pushState(null, '', '#/duyinzdic');
-            } else if (app === 'yunpu') {
-                iframe.src = 'yunpu.html';
-                duyinBtn.classList.remove('active');
-                duyinzdicBtn.classList.remove('active');
-                yunpuBtn.classList.add('active');
-                evolutionBtn.classList.remove('active');
-                document.title = '韻譜';
-                history.pushState(null, '', '#/yunpu');
-            } else if (app === 'evolution') {
-                iframe.src = 'evolution.html';
-                duyinBtn.classList.remove('active');
-                duyinzdicBtn.classList.remove('active');
-                yunpuBtn.classList.remove('active');
-                evolutionBtn.classList.add('active');
-                document.title = '演化圖';
-                history.pushState(null, '', '#/evolution');
-            }
+            const app = apps.find(a => a.id === appId);
+            
+            if (!app) return;
+
+            // 顯示加載提示
+            document.body.classList.add('loading');
+            
+            // 更新 iframe
+            iframe.src = app.path;
+            
+            // 監聽 iframe 加載完成
+            iframe.onload = () => {
+                document.body.classList.remove('loading');
+            };
+            
+            // 更新按鈕狀態
+            apps.forEach(a => {
+                document.getElementById(`${a.id}-btn`).classList.toggle('active', a.id === appId);
+            });
+            
+            // 更新標題和 URL
+            document.title = app.title;
+            history.pushState(null, '', `#/${appId}`);
         }
 
         function handleHashChange() {
-            const hash = window.location.hash;
-            if (hash === '#/yunpu') {
-                loadApp('yunpu');
-            } else if (hash === '#/duyinzdic') {
-                loadApp('duyinzdic');
-            } else if (hash === '#/evolution') {
-                loadApp('evolution');
-            } else {
-                loadApp('duyin');
-            }
+            const hash = window.location.hash.slice(2); // 移除 '#/'
+            const app = apps.find(a => a.id === hash);
+            loadApp(app ? app.id : 'duyin');
         }
 
-        // 监听hash变化
+        // 初始化
+        createButtons();
         window.addEventListener('hashchange', handleHashChange);
-
-        // 初始加载时检查hash
         handleHashChange();
-
+        
         // PWA 更新管理
         class PWAUpdater {
             constructor() {
