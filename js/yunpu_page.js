@@ -21,6 +21,7 @@ function initTooltips() {
         tooltip.textContent = text;
 
         const rect = element.getBoundingClientRect();
+        tooltip.style.position = 'fixed';
         tooltip.style.left = `${rect.left}px`;
         tooltip.style.top = `${rect.bottom + 5}px`;
         tooltip.style.display = 'block';
