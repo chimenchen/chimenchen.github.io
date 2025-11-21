@@ -145,6 +145,169 @@ var chunkID = 0;
       this.pusher = null;
       this.pusher_buffer_size = 4096;
       this.chunkID = 0;
+      this.recordedChunks = [];
+      this.latestAudioUrl = null;
+      this.latestAudioBlob = null;
+      this.latestAudioFilename = null;
+      this.downloadingAnchor = null;
+      this.filenamePrefix = 'espeak';
+    }
+
+    dispatchAudioReset() {
+      window.dispatchEvent(new CustomEvent('espeak-audio-reset'));
+    }
+
+    beginSynthesisSession() {
+      this.releaseLatestAudioUrl();
+      this.latestAudioBlob = null;
+      this.latestAudioFilename = null;
+      this.recordedChunks = [];
+      this.dispatchAudioReset();
+    }
+
+    releaseLatestAudioUrl() {
+      if (this.latestAudioUrl) {
+        URL.revokeObjectURL(this.latestAudioUrl);
+        this.latestAudioUrl = null;
+      }
+    }
+
+    setFilenamePrefix(prefix) {
+      if (typeof prefix !== 'string') {
+        this.filenamePrefix = 'espeak';
+        return;
+      }
+      const trimmed = prefix.trim();
+      if (!trimmed) {
+        this.filenamePrefix = 'espeak';
+        return;
+      }
+      const sanitized = trimmed
+        .replace(/[\\\/:*?"<>|]/g, '_')
+        .replace(/\s+/g, '_')
+        .slice(0, 60);
+      this.filenamePrefix = sanitized || 'espeak';
+    }
+
+    buildAudioFilename() {
+      const now = new Date();
+      const pad = (num) => num.toString().padStart(2, '0');
+      const prefix = this.filenamePrefix || 'espeak';
+      return `${prefix}-${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}.wav`;
+    }
+
+    mergeRecordedChunks() {
+      if (!this.recordedChunks.length) {
+        return null;
+      }
+      const totalLength = this.recordedChunks.reduce((sum, chunk) => sum + chunk.length, 0);
+      const mergedBuffer = new Float32Array(totalLength);
+      let offset = 0;
+      for (const chunk of this.recordedChunks) {
+        mergedBuffer.set(chunk, offset);
+        offset += chunk.length;
+      }
+      return mergedBuffer;
+    }
+
+    encodeWav(samples, sampleRate) {
+      const buffer = new ArrayBuffer(44 + samples.length * 2);
+      const view = new DataView(buffer);
+
+      const writeString = (offset, string) => {
+        for (let i = 0; i < string.length; i++) {
+          view.setUint8(offset + i, string.charCodeAt(i));
+        }
+      };
+
+      const numChannels = 1;
+      const bytesPerSample = 2;
+      const blockAlign = numChannels * bytesPerSample;
+
+      writeString(0, 'RIFF');
+      view.setUint32(4, 36 + samples.length * bytesPerSample, true);
+      writeString(8, 'WAVE');
+      writeString(12, 'fmt ');
+      view.setUint32(16, 16, true); // Subchunk1Size
+      view.setUint16(20, 1, true); // PCM format
+      view.setUint16(22, numChannels, true);
+      view.setUint32(24, sampleRate, true);
+      view.setUint32(28, sampleRate * blockAlign, true);
+      view.setUint16(32, blockAlign, true);
+      view.setUint16(34, 8 * bytesPerSample, true);
+      writeString(36, 'data');
+      view.setUint32(40, samples.length * bytesPerSample, true);
+
+      let offset = 44;
+      for (let i = 0; i < samples.length; i++, offset += 2) {
+        const s = Math.max(-1, Math.min(1, samples[i]));
+        view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+      }
+
+      return buffer;
+    }
+
+    finalizeRecording() {
+      const merged = this.mergeRecordedChunks();
+      this.recordedChunks = [];
+      if (!merged) {
+        window.dispatchEvent(new CustomEvent('espeak-audio-ready', {
+          detail: {
+            url: null,
+            filename: null,
+          }
+        }));
+        return;
+      }
+      const sampleRate = this.ctx ? this.ctx.sampleRate : 44100;
+      const wavBuffer = this.encodeWav(merged, sampleRate);
+      this.latestAudioBlob = new Blob([wavBuffer], { type: 'audio/wav' });
+      this.releaseLatestAudioUrl();
+      this.latestAudioUrl = URL.createObjectURL(this.latestAudioBlob);
+      this.latestAudioFilename = this.buildAudioFilename();
+
+      window.dispatchEvent(new CustomEvent('espeak-audio-ready', {
+        detail: {
+          url: this.latestAudioUrl,
+          filename: this.latestAudioFilename,
+        }
+      }));
+    }
+
+    espeakReplayLastAudio() {
+      if (!this.latestAudioUrl) {
+        return false;
+      }
+      const audio = new Audio(this.latestAudioUrl);
+      audio.play();
+      return true;
+    }
+
+    espeakDownloadLastAudio() {
+      if (!this.latestAudioUrl) {
+        return false;
+      }
+      const link = this.downloadingAnchor || document.createElement('a');
+      link.style.display = 'none';
+      link.href = this.latestAudioUrl;
+      link.download = this.latestAudioFilename || 'espeak.wav';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      this.downloadingAnchor = link;
+      return true;
+    }
+
+    appendRecordedSamples(samples) {
+      if (!samples) {
+        return null;
+      }
+      let chunk = samples;
+      if (!(samples instanceof Float32Array)) {
+        chunk = new Float32Array(samples);
+      }
+      this.recordedChunks.push(chunk);
+      return chunk;
     }
 
     espeakInit() {
@@ -183,6 +346,7 @@ var chunkID = 0;
         this.ctx.resume();
       }
       this.espeakStopPlay();
+       this.beginSynthesisSession();
 
       this.tts.set_rate(Number(document.getElementById('rate').value));
       this.tts.set_pitch(Number(document.getElementById('pitch').value));
@@ -211,10 +375,12 @@ var chunkID = 0;
             if (this.pusher) {
               this.pusher.close();
             }
+            this.finalizeRecording();
             return;
           }
-          if (this.pusher) {
-            this.pusher.push(new Float32Array(samples));
+          const chunk = this.appendRecordedSamples(samples);
+          if (this.pusher && chunk) {
+            this.pusher.push(chunk);
             ++this.chunkID;
           }
         }
@@ -235,7 +401,10 @@ var chunkID = 0;
     espeakInit: zhongwenSpeech.espeakInit.bind(zhongwenSpeech),
     espeakStopPlay: zhongwenSpeech.espeakStopPlay.bind(zhongwenSpeech),
     espeakSpeakText: zhongwenSpeech.espeakSpeakText.bind(zhongwenSpeech),
-    espeakSpeakTextInTextarea: zhongwenSpeech.espeakSpeakTextInTextarea.bind(zhongwenSpeech)
+    espeakSpeakTextInTextarea: zhongwenSpeech.espeakSpeakTextInTextarea.bind(zhongwenSpeech),
+    espeakReplayLastAudio: zhongwenSpeech.espeakReplayLastAudio.bind(zhongwenSpeech),
+    espeakDownloadLastAudio: zhongwenSpeech.espeakDownloadLastAudio.bind(zhongwenSpeech),
+    espeakSetFilenamePrefix: zhongwenSpeech.setFilenamePrefix.bind(zhongwenSpeech)
   };
 
   // 為了向後兼容，保留全局函數
@@ -243,5 +412,8 @@ var chunkID = 0;
   window.espeakSpeakText = window.zhongwen.espeakSpeakText;
   window.espeakSpeakTextInTextarea = window.zhongwen.espeakSpeakTextInTextarea;
   window.espeakStopPlay = window.zhongwen.espeakStopPlay;
+  window.espeakReplayLastAudio = window.zhongwen.espeakReplayLastAudio;
+  window.espeakDownloadLastAudio = window.zhongwen.espeakDownloadLastAudio;
+  window.espeakSetFilenamePrefix = window.zhongwen.espeakSetFilenamePrefix;
 
 })(window);
