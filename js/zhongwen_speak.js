@@ -151,6 +151,7 @@ var chunkID = 0;
       this.latestAudioFilename = null;
       this.downloadingAnchor = null;
       this.filenamePrefix = 'espeak';
+      this.replayAudio = null;
     }
 
     dispatchAudioReset() {
@@ -278,8 +279,20 @@ var chunkID = 0;
       if (!this.latestAudioUrl) {
         return false;
       }
+      if (this.replayAudio) {
+        this.replayAudio.pause();
+        this.replayAudio.currentTime = 0;
+        this.replayAudio = null;
+        return true;
+      }
       const audio = new Audio(this.latestAudioUrl);
+      audio.onended = () => {
+        if (this.replayAudio === audio) {
+          this.replayAudio = null;
+        }
+      };
       audio.play();
+      this.replayAudio = audio;
       return true;
     }
 
@@ -325,6 +338,11 @@ var chunkID = 0;
       if (this.pusher) {
         this.pusher.disconnect();
         this.pusher = null;
+      }
+      if (this.replayAudio) {
+        this.replayAudio.pause();
+        this.replayAudio.currentTime = 0;
+        this.replayAudio = null;
       }
     }
 
