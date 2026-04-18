@@ -185,6 +185,7 @@
         // 設置事件監聽器
         setupEventListeners() {
             this.chart.on('click', this.handleClick.bind(this));
+            this.chart.on('dblclick', this.handleDoubleClick.bind(this));
             this.chart.on('graphRoam', this.throttledHandleGraphRoam.bind(this));
             this.chart.on('restore', this.handleRestore.bind(this));
             window.addEventListener('resize', this.throttle(this.handleResize.bind(this), this.throttleDelay));
@@ -381,6 +382,86 @@
                     this.tooltipShown = true;
                 }
             }
+        }
+
+        handleDoubleClick(params) {
+            // console.log("handleDoubleClick", params);
+            
+            if (params.componentType === 'series') {
+                const data = params.data;
+                if (data) {
+                    // 节点：优先使用 desc（tooltip内容），其次使用 name
+                    // 连线：使用 data.desc 或 data.name
+                    const textToCopy = data.desc || data.name;
+                    if (textToCopy) {
+                        this.copyToClipboard(textToCopy);
+                    }
+                }
+            } else if (params.componentType === 'edge') {
+                // 處理連線
+                const textToCopy = params.name || params.data?.name;
+                if (textToCopy) {
+                    this.copyToClipboard(textToCopy);
+                }
+            }
+        }
+
+        copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                this.showCopyFeedback('已複製到剪貼板');
+            }).catch(err => {
+                console.error('複製失敗：', err);
+                // 降級方案：使用傳統的execCommand
+                this.fallbackCopyToClipboard(text);
+            });
+        }
+
+        fallbackCopyToClipboard(text) {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.style.position = 'fixed';
+            textarea.style.opacity = '0';
+            document.body.appendChild(textarea);
+            textarea.select();
+            try {
+                document.execCommand('copy');
+                this.showCopyFeedback('已複製到剪貼板');
+            } catch (err) {
+                console.error('降級複製失敗：', err);
+                this.showCopyFeedback('複製失敗');
+            }
+            document.body.removeChild(textarea);
+        }
+
+        showCopyFeedback(message) {
+            const feedback = document.createElement('div');
+            feedback.className = 'copy-feedback';
+            feedback.textContent = message;
+            feedback.style.cssText = `
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background-color: rgba(0, 0, 0, 0.8);
+                color: white;
+                padding: 12px 24px;
+                border-radius: 8px;
+                font-size: 14px;
+                z-index: 10000;
+                pointer-events: none;
+                opacity: 0;
+                transition: opacity 0.3s ease;
+            `;
+            document.body.appendChild(feedback);
+            // 觸發重排以使動畫生效
+            feedback.offsetHeight;
+            feedback.style.opacity = '1';
+            setTimeout(() => {
+                feedback.style.opacity = '0';
+                setTimeout(() => {
+                    document.body.removeChild(feedback);
+                }, 300);
+            }, 1500);
         }
     
     }
