@@ -359,9 +359,10 @@ body.loading > *:not(#splash) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 18px;
+  min-width: 18px;
   height: 18px;
-  border-radius: 50%;
+  padding: 0 6px;
+  border-radius: 9px;
   background-color: #e74c3c;
   color: white;
   font-weight: bold;

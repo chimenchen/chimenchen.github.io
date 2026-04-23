@@ -387,22 +387,23 @@
         handleDoubleClick(params) {
             // console.log("handleDoubleClick", params);
             
+            let textToCopy = null;
+            
             if (params.componentType === 'series') {
                 const data = params.data;
                 if (data) {
                     // 节点：优先使用 desc（tooltip内容），其次使用 name
-                    // 连线：使用 data.desc 或 data.name
-                    const textToCopy = data.desc || data.name;
-                    if (textToCopy) {
-                        this.copyToClipboard(textToCopy);
-                    }
+                    textToCopy = data.desc || data.name;
                 }
             } else if (params.componentType === 'edge') {
                 // 處理連線
-                const textToCopy = params.name || params.data?.name;
-                if (textToCopy) {
-                    this.copyToClipboard(textToCopy);
-                }
+                textToCopy = params.name || params.data?.name;
+            }
+            
+            if (textToCopy) {
+                // 將 <br> 替換為普通換行符
+                textToCopy = textToCopy.replace(/<br\s*\/?>/gi, '\n');
+                this.copyToClipboard(textToCopy);
             }
         }
 
