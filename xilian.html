@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+  <html lang="zh">
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1">
+      <title>假借字聲母關係圖</title>
+      <style>
+        :root {
+        color-scheme: light dark;
+        }
+        body {
+        background-color: #fff;
+        color: #333;
+        margin: 0;
+        padding: 0;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Helvetica Neue", "Arial", "Noto Sans", "Microsoft YaHei", "PingFang SC", "Hiragino Sans GB", "Heiti SC", sans-serif;
+        }
+        @media (prefers-color-scheme: dark) {
+        body {
+        background-color: #222;
+        color: #e0e0e0;
+        }
+        }
+        #splash {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: var(--color-background);
+        padding-top: 4rem;
+        transition: opacity 200ms ease, visibility 200ms;
+        -webkit-transition: opacity 200ms ease, visibility 200ms;
+        visibility: hidden;
+        opacity: 0;
+        }
+        body.loading #splash {
+        visibility: visible;
+        opacity: 1;
+        }
+        #splash > * {
+        width: 10rem;
+        max-width: 480px;
+        margin: 2rem auto;
+        display: block;
+        text-align: center;
+        }
+        body.loading > *:not(#splash) {
+        visibility: hidden;
+        }
+      </style>
+      <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+      <script>
+        // xilianChart namespace
+        var xilianChart = xilianChart || {};
+        // XilianChart类
+        class XilianChart {
+        constructor(chartDom) {
+        this.chartDom = chartDom;
+        this.chart = null;
+        }
+        // 初始化图表
+        init(optionsStr, createNewInstance) {
+        console.log('XilianChart.init called');
+        console.log('Chart DOM:', this.chartDom);
+        console.log('Chart DOM size:', {
+        width: this.chartDom.clientWidth,
+        height: this.chartDom.clientHeight
+        });
+        var options = JSON.parse(optionsStr);
+        console.log('Parsed options:', options);
+        // 提取option部分
+        var chartOption = options.option || options;
+        console.log('Chart option before preprocess:', chartOption);
+        // 预处理图表选项
+        chartOption = this.preprocessOption(chartOption);
+        console.log('Chart option after preprocess:', chartOption);
+        // 如果是创建新实例，先销毁旧实例
+        if (createNewInstance || !this.chart) {
+        console.log('Creating new chart instance');
+        if (this.chart) {
+        console.log('Disposing old chart instance');
+        this.chart.dispose();
+        }
+        this.chart = echarts.init(this.chartDom);
+        console.log('Chart instance created:', this.chart);
+        }
+        try {
+        // 设置配置项并渲染图表
+        console.log('Setting chart option...');
+        this.chart.setOption(chartOption);
+        console.log('Chart option set successfully');
+        // 检查图表实例状态
+        console.log('Chart instance exists:', !!this.chart);
+        console.log('Chart instance is disposed:', this.chart.isDisposed());
+        } catch (error) {
+        console.error('Error setting chart option:', error);
+        }
+        // 响应式调整
+        window.addEventListener('resize', function() {
+        if (this.chart) {
+        this.chart.resize();
+        }
+        }.bind(this));
+        }
+        // 预处理图表选项
+        preprocessOption(option) {
+        if (option.tooltip && option.tooltip.formatter === "tooltipFormatter") {
+        option.tooltip.formatter = this.tooltipFormatter.bind(this);
+        }
+        return option;
+        }
+        // 工具提示格式化函数
+        tooltipFormatter(params) {
+        if (params.data && params.data.desc) {
+        return '<div class="echarts-tooltip-content">' + params.data.desc + '</div>';
+        }
+        return params.name;
+        }
+        }
+        // 创建或更新图表
+        xilianChart.createOrUpdateChart = function(chartDom, optionsStr, createNewInstance) {
+        if (!chartDom.xilianChartInstance) {
+        chartDom.xilianChartInstance = new XilianChart(chartDom);
+        }
+        chartDom.xilianChartInstance.init(optionsStr, createNewInstance);
+        };
+      </script>
+      <link rel="preload" href="/xilian-web_bg.wasm" as="fetch" type="application/wasm" crossorigin="">
+      <link rel="modulepreload" href="/xilian-web.js">
+      <script type="module">
+        import init from '/xilian-web.js';
+        init({
+        url: '/xilian-web_bg.wasm'
+        });
+      </script>
+      <base target="_parent">
+      </head>
+      <body class="loading">
+        <div id="splash">
+          <div>載入中……</div>
+          <progress></progress>
+        </div>
+      </body>
+</html>

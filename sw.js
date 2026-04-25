@@ -1,4 +1,4 @@
-const CACHE_VERSION = '1.0.532';
+const CACHE_VERSION = '1.0.535';
 const CACHE_NAME = `koukoushengsheng-${CACHE_VERSION}`;
 
 const urlsToCache = [
@@ -33,6 +33,10 @@ const urlsToCache = [
     '/yunpu-web_bg.wasm',
     '/js/yunpu_page.js',
     '/js/yunpu_chart.js',
+
+    '/xilian.html',
+    '/xilian-web.js',
+    '/xilian-web_bg.wasm',
 
     '/evolution.html',
     '/evolution-web.js',
