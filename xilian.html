@@ -49,83 +49,8 @@
         visibility: hidden;
         }
       </style>
-      <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
-      <script>
-        // xilianChart namespace
-        var xilianChart = xilianChart || {};
-        // XilianChart类
-        class XilianChart {
-        constructor(chartDom) {
-        this.chartDom = chartDom;
-        this.chart = null;
-        }
-        // 初始化图表
-        init(optionsStr, createNewInstance) {
-        console.log('XilianChart.init called');
-        console.log('Chart DOM:', this.chartDom);
-        console.log('Chart DOM size:', {
-        width: this.chartDom.clientWidth,
-        height: this.chartDom.clientHeight
-        });
-        var options = JSON.parse(optionsStr);
-        console.log('Parsed options:', options);
-        // 提取option部分
-        var chartOption = options.option || options;
-        console.log('Chart option before preprocess:', chartOption);
-        // 预处理图表选项
-        chartOption = this.preprocessOption(chartOption);
-        console.log('Chart option after preprocess:', chartOption);
-        // 如果是创建新实例，先销毁旧实例
-        if (createNewInstance || !this.chart) {
-        console.log('Creating new chart instance');
-        if (this.chart) {
-        console.log('Disposing old chart instance');
-        this.chart.dispose();
-        }
-        this.chart = echarts.init(this.chartDom);
-        console.log('Chart instance created:', this.chart);
-        }
-        try {
-        // 设置配置项并渲染图表
-        console.log('Setting chart option...');
-        this.chart.setOption(chartOption);
-        console.log('Chart option set successfully');
-        // 检查图表实例状态
-        console.log('Chart instance exists:', !!this.chart);
-        console.log('Chart instance is disposed:', this.chart.isDisposed());
-        } catch (error) {
-        console.error('Error setting chart option:', error);
-        }
-        // 响应式调整
-        window.addEventListener('resize', function() {
-        if (this.chart) {
-        this.chart.resize();
-        }
-        }.bind(this));
-        }
-        // 预处理图表选项
-        preprocessOption(option) {
-        if (option.tooltip && option.tooltip.formatter === "tooltipFormatter") {
-        option.tooltip.formatter = this.tooltipFormatter.bind(this);
-        }
-        return option;
-        }
-        // 工具提示格式化函数
-        tooltipFormatter(params) {
-        if (params.data && params.data.desc) {
-        return '<div class="echarts-tooltip-content">' + params.data.desc + '</div>';
-        }
-        return params.name;
-        }
-        }
-        // 创建或更新图表
-        xilianChart.createOrUpdateChart = function(chartDom, optionsStr, createNewInstance) {
-        if (!chartDom.xilianChartInstance) {
-        chartDom.xilianChartInstance = new XilianChart(chartDom);
-        }
-        chartDom.xilianChartInstance.init(optionsStr, createNewInstance);
-        };
-      </script>
+      <script src="/js/echarts.min.js"></script>
+      <script src="/js/xilian_chart.js"></script>
       <link rel="preload" href="/xilian-web_bg.wasm" as="fetch" type="application/wasm" crossorigin="">
       <link rel="modulepreload" href="/xilian-web.js">
       <script type="module">
