@@ -1,4 +1,4 @@
-const CACHE_VERSION = '1.0.560';
+const CACHE_VERSION = '1.0.561';
 const CACHE_NAME = `koukoushengsheng-${CACHE_VERSION}`;
 
 const urlsToCache = [
@@ -11,9 +11,6 @@ const urlsToCache = [
     '/duyin.html',
     '/duyin-web.js',
     '/duyin-web_bg.wasm',
-
-    '/espeak.html',
-    '/js/demo.js',
 
     '/duyin.css',
     '/js/espeakng.js',
@@ -37,6 +34,7 @@ const urlsToCache = [
     '/xilian.html',
     '/xilian-web.js',
     '/xilian-web_bg.wasm',
+    '/js/xilian_chart.js',
 
     '/evolution.html',
     '/evolution-web.js',
