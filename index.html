@@ -74,11 +74,12 @@
         }
         #loading {
             position: absolute;
-            top: 22px;
+            top: 0;
             left: 0;
             right: 0;
             bottom: 0;
             background-color: var(--iframe-bg);
+            padding-top: 0;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -88,7 +89,7 @@
         /* 添加加載提示樣式 */
         #splash {
             position: absolute;
-            top: 22px; /* 按鈕容器高度 */
+            top: 22px;
             left: 0;
             right: 0;
             bottom: 0;
@@ -101,7 +102,7 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 2rem;
+            /* gap: 2rem; */
         }
 
         body.loading #splash {
@@ -112,6 +113,7 @@
         #splash > * {
             width: 10rem;
             max-width: 480px;
+            margin: 2rem auto;
             display: block;
             text-align: center;
         }
@@ -127,7 +129,7 @@
     </div>
     <iframe id="app-container"></iframe>
     <div id="splash">
-        <div>加載中……</div>
+        <div>正在搬砖，请稍候...</div>
         <progress></progress>
     </div>
 
