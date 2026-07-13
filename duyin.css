@@ -128,7 +128,7 @@ body {
 /* loading screen */
 #splash {
   position: absolute;
-  top: 0;
+  top: 22px;
   left: 0;
   right: 0;
   bottom: 0;
