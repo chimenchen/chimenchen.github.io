@@ -5,13 +5,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>演化圖</title>
     <script src="/js/evolution_chart.js"></script>
-    <link rel="preload" href="/evolution-web_bg.wasm?v=1.0.614" as="fetch" type="application/wasm" crossorigin="">
-    <link rel="modulepreload" href="/evolution-web.js?v=1.0.614">
+    <script nomodule>
+      // 不支持 ES Modules 的瀏覽器：說明原因，避免一直停在「正在思考……」
+      document.addEventListener('DOMContentLoaded', function () {
+      var msg = '您的瀏覽器版本過舊（不支持 WebAssembly / 新版 JavaScript），無法運行本站。'
+      + '請改用最新版的 Chrome、Edge 或 Firefox（iPhone 請用 Safari）。';
+      var s = document.getElementById('splash-status');
+      if (s) { s.textContent = msg; }
+      else if (document.body) { document.body.textContent = msg; }
+      });
+    </script>
+    <link rel="preload" href="/evolution-web_bg.wasm?v=1.0.625" as="fetch" type="application/wasm" crossorigin="">
+    <link rel="modulepreload" href="/evolution-web.js?v=1.0.625">
     <script type="module">
-      import init from '/evolution-web.js?v=1.0.614';
+      import init from '/evolution-web.js?v=1.0.625';
       (async function startApp() {
       try {
-      await init({ url: '/evolution-web_bg.wasm?v=1.0.614' });
+      await init({ url: '/evolution-web_bg.wasm?v=1.0.625' });
       try { sessionStorage.removeItem('__assetReload'); } catch (e) { /* 忽略 */ }
       } catch (error) {
       console.error(error);

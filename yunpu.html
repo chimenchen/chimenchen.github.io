@@ -51,10 +51,20 @@
       </style>
       <script src="/js/yunpu_chart.js"></script>
       <script src="/js/yunpu_page.js"></script>
-      <link rel="preload" href="/yunpu-web_bg.wasm?v=1.0.614" as="fetch" type="application/wasm" crossorigin="">
-      <link rel="modulepreload" href="/yunpu-web.js?v=1.0.614">
+      <script nomodule>
+        // 不支持 ES Modules 的瀏覽器：說明原因，避免一直停在「正在思考……」
+        document.addEventListener('DOMContentLoaded', function () {
+        var msg = '您的瀏覽器版本過舊（不支持 WebAssembly / 新版 JavaScript），無法運行本站。'
+        + '請改用最新版的 Chrome、Edge 或 Firefox（iPhone 請用 Safari）。';
+        var s = document.getElementById('splash-status');
+        if (s) { s.textContent = msg; }
+        else if (document.body) { document.body.textContent = msg; }
+        });
+      </script>
+      <link rel="preload" href="/yunpu-web_bg.wasm?v=1.0.625" as="fetch" type="application/wasm" crossorigin="">
+      <link rel="modulepreload" href="/yunpu-web.js?v=1.0.625">
       <script type="module">
-        import init from '/yunpu-web.js?v=1.0.614';
+        import init from '/yunpu-web.js?v=1.0.625';
         // 下載並啟動 wasm：顯示下載進度；失敗時給出明確提示。
         async function startApp() {
         const statusEl = document.getElementById('splash-status');
@@ -67,7 +77,7 @@
         throw new Error('此瀏覽器不支持 WebAssembly');
         }
         setStatus('正在下載程序……');
-        const response = await fetch('/yunpu-web_bg.wasm?v=1.0.614', { credentials: 'omit' });
+        const response = await fetch('/yunpu-web_bg.wasm?v=1.0.625', { credentials: 'omit' });
         if (!response.ok) {
         throw new Error('下載失敗（HTTP ' + response.status + '）');
         }
