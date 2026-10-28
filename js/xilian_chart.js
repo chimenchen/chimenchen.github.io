@@ -4,6 +4,29 @@ var xilianChart = xilianChart || {};
 // 保存图表实例
 xilianChart.chartInstance = null;
 
+// echarts 約 1MB，首屏不阻塞加載：第一次繪圖時才動態插入 <script>
+var echartsLoadingPromise = null;
+
+function ensureEchartsLoaded() {
+    if (window.echarts) {
+        return Promise.resolve(window.echarts);
+    }
+    if (!echartsLoadingPromise) {
+        echartsLoadingPromise = new Promise(function(resolve, reject) {
+            var script = document.createElement('script');
+            script.src = '/js/echarts.min.js';
+            script.async = true;
+            script.onload = function() { resolve(window.echarts); };
+            script.onerror = function() {
+                echartsLoadingPromise = null; // 允許重試
+                reject(new Error('echarts 加載失敗'));
+            };
+            document.head.appendChild(script);
+        });
+    }
+    return echartsLoadingPromise;
+}
+
 // 应用图表样式
 xilianChart.applyChartStyles = function(cssContent) {
     const styleElement = document.createElement('style');
@@ -247,7 +270,9 @@ xilianChart.setupToolboxFeatures = function(option) {
 };
 
 // 创建或更新图表
-xilianChart.createOrUpdateChart = function(chartDom, optionsStr, createNewInstance) {
+xilianChart.createOrUpdateChart = async function(chartDom, optionsStr, createNewInstance) {
+    // 等 echarts 就緒（首次調用會下載）
+    await ensureEchartsLoaded();
     console.log('xilianChart.createOrUpdateChart called');
     console.log('Chart DOM:', chartDom);
     console.log('Chart DOM size:', {

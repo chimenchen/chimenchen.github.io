@@ -136,10 +136,6 @@ function __wbg_get_imports() {
                 wasm.__wbindgen_free(deferred0_0, deferred0_1, 1);
             }
         },
-        __wbg_eval_832ed6e42a9be51c: function() { return handleError(function (arg0, arg1) {
-            const ret = eval(getStringFromWasm0(arg0, arg1));
-            return ret;
-        }, arguments); },
         __wbg_fetch_6ecc661950e58d49: function(arg0, arg1) {
             const ret = arg0.fetch(arg1);
             return ret;
@@ -182,8 +178,8 @@ function __wbg_get_imports() {
         __wbg_info_79f5309d69d9c70e: function(arg0, arg1, arg2, arg3) {
             console.info(arg0, arg1, arg2, arg3);
         },
-        __wbg_init_7810bdcdd9ef62d1: function(arg0) {
-            const ret = echarts.init(arg0);
+        __wbg_initAsync_c9e11bcb7abe0db6: function(arg0) {
+            const ret = evolutionChart.initAsync(arg0);
             return ret;
         },
         __wbg_insertBefore_9121f73148bc4f7c: function() { return handleError(function (arg0, arg1, arg2) {
@@ -408,8 +404,9 @@ function __wbg_get_imports() {
         __wbg_setItem_364a11cf21db9039: function() { return handleError(function (arg0, arg1, arg2, arg3, arg4) {
             arg0.setItem(getStringFromWasm0(arg1, arg2), getStringFromWasm0(arg3, arg4));
         }, arguments); },
-        __wbg_setOption_d1c6032fa6387412: function(arg0, arg1) {
-            arg0.setOption(arg1);
+        __wbg_setOptionAsync_fc022591de9733ff: function(arg0, arg1) {
+            const ret = evolutionChart.setOptionAsync(arg0, arg1);
+            return ret;
         },
         __wbg_setTimeout_ef24d2fc3ad97385: function() { return handleError(function (arg0, arg1) {
             const ret = setTimeout(arg0, arg1);

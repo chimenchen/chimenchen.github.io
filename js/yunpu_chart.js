@@ -3,6 +3,29 @@
 (function(window) {
     'use strict';
 
+    // echarts 約 1MB，首屏不阻塞加載：第一次繪圖時才動態插入 <script>。
+    let echartsLoadingPromise = null;
+
+    function ensureEchartsLoaded() {
+        if (window.echarts) {
+            return Promise.resolve(window.echarts);
+        }
+        if (!echartsLoadingPromise) {
+            echartsLoadingPromise = new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = '/js/echarts.min.js';
+                script.async = true;
+                script.onload = () => resolve(window.echarts);
+                script.onerror = () => {
+                    echartsLoadingPromise = null; // 允許重試
+                    reject(new Error('echarts 加載失敗'));
+                };
+                document.head.appendChild(script);
+            });
+        }
+        return echartsLoadingPromise;
+    }
+
     class YunpuChart {
         constructor(chartDom) {
             this.chartDom = chartDom;
@@ -469,6 +492,8 @@
 
     // 創建或更新圖表的主函數
     async function createOrUpdateChart(chartDom, data, createNewInstance) {
+        // 等 echarts 就緒（首次調用會下載，約 1MB / gzip 0.34MB）
+        await ensureEchartsLoaded();
         data = preprocessData(data);
         if (!data.option) {
             console.error('無效的數據結構：缺少 option');
