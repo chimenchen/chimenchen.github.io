@@ -91,32 +91,32 @@
 }
 @font-face {
   font-family: "FangZhengSongKeBen";
-  src: url("/fonts/方正宋刻本秀楷微调.ttf") format("truetype");
+  src: url("/fonts/方正宋刻本秀楷微调.woff2") format("woff2");
   font-display: swap;
 }
 @font-face {
   font-family: "LingDongQiChe";
-  src: url("/fonts/LingDongQiCheChunTang-2.ttf") format("truetype");
+  src: url("/fonts/LingDongQiCheChunTang-2.woff2") format("woff2");
   font-display: swap;
 }
 @font-face {
   font-family: "HanaMinA";
-  src: url("/fonts/HanaMinA.ttf") format("truetype");
+  src: url("/fonts/HanaMinA.woff2") format("woff2");
   font-display: swap;
 }
 @font-face {
   font-family: "FangZhengLiBian";
-  src: url("/fonts/FZLBK.ttf") format("truetype");
+  src: url("/fonts/FZLBK.woff2") format("woff2");
   font-display: swap;
 }
 @font-face {
   font-family: "CharisSIL";
-  src: url("/fonts/CharisSIL.ttf") format("truetype");
+  src: url("/fonts/CharisSIL.woff2") format("woff2");
   font-display: swap;
 }
 @font-face {
   font-family: "GentiumPlus";
-  src: url("/fonts/GentiumPlus.ttf") format("truetype");
+  src: url("/fonts/GentiumPlus.woff2") format("woff2");
   font-display: swap;
 }
 body {
