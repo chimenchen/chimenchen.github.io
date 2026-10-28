@@ -131,6 +131,7 @@
     <div id="splash">
         <div>正在搬砖，请稍候...</div>
         <progress></progress>
+        <div id="splash-hint" style="font-size: 0.8rem; line-height: 1.5; opacity: 0.7; min-height: 1em;"></div>
     </div>
 
     <script>
@@ -163,12 +164,20 @@
 
             // 顯示加載提示
             document.body.classList.add('loading');
+
+            // 加載時間過長時給出提示（避免用戶誤以為卡死）
+            const hint = document.getElementById('splash-hint');
+            if (hint) hint.textContent = '';
+            const slowTimer = setTimeout(() => {
+                if (hint) hint.textContent = '仍在加載……如長時間無反應，請刷新頁面或更換瀏覽器。';
+            }, 15000);
             
             // 更新 iframe
             iframe.src = app.path;
             
             // 監聽 iframe 加載完成
             iframe.onload = () => {
+                clearTimeout(slowTimer);
                 document.body.classList.remove('loading');
             };
             

@@ -56,16 +56,63 @@
       <link rel="modulepreload" href="/yunpu-web.js">
       <script type="module">
         import init from '/yunpu-web.js';
-        init({
-        url: '/yunpu-web_bg.wasm'
-        });
+        // 下載並啟動 wasm：顯示下載進度；失敗時給出明確提示。
+        async function startApp() {
+        const statusEl = document.getElementById('splash-status');
+        const progressEl = document.getElementById('splash-progress');
+        const setStatus = (text) => {
+        if (statusEl) statusEl.textContent = text;
+        };
+        try {
+        if (typeof WebAssembly !== 'object') {
+        throw new Error('此瀏覽器不支持 WebAssembly');
+        }
+        setStatus('正在下載程序……');
+        const response = await fetch('/yunpu-web_bg.wasm', { credentials: 'omit' });
+        if (!response.ok) {
+        throw new Error('下載失敗（HTTP ' + response.status + '）');
+        }
+        let bytes;
+        if (response.body && response.body.getReader) {
+        const reader = response.body.getReader();
+        const chunks = [];
+        let received = 0;
+        for (;;) {
+        const step = await reader.read();
+        if (step.done) break;
+        chunks.push(step.value);
+        received += step.value.length;
+        setStatus('正在下載程序…… ' + (received / 1048576).toFixed(1) + ' MB');
+        }
+        bytes = new Uint8Array(received);
+        let offset = 0;
+        for (const chunk of chunks) {
+        bytes.set(chunk, offset);
+        offset += chunk.length;
+        }
+        } else {
+        bytes = new Uint8Array(await response.arrayBuffer());
+        }
+        if (!WebAssembly.validate(bytes)) {
+        throw new Error('此瀏覽器不支持本程序所需的 WebAssembly 特性，請升級瀏覽器（建議 Chrome 96 以上 / Safari 15 以上）');
+        }
+        setStatus('正在初始化……');
+        await init({ module_or_path: bytes });
+        } catch (error) {
+        console.error(error);
+        if (progressEl) progressEl.remove();
+        setStatus('加載失敗：' + (error && error.message ? error.message : error) + '。請刷新頁面重試，或更換瀏覽器。');
+        }
+        }
+        startApp();
       </script>
       <base target="_parent">
       </head>
       <body class="loading">
         <div id="splash">
           <div>韻譜系統<br>正在思考……</div>
-          <progress></progress>
+          <progress id="splash-progress"></progress>
+          <div id="splash-status" style="width: 20rem; font-size: 0.8rem; line-height: 1.5;"></div>
         </div>
       </body>
 </html>

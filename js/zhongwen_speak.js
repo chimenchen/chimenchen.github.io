@@ -152,6 +152,9 @@ var chunkID = 0;
       this.downloadingAnchor = null;
       this.filenamePrefix = 'espeak';
       this.replayAudio = null;
+      // 語音引擎按需加載（espeakng.worker.data 約 6.8MB），首次播放時才初始化
+      this.ttsReady = false;
+      this.pendingText = null;
     }
 
     dispatchAudioReset() {
@@ -325,16 +328,25 @@ var chunkID = 0;
 
     espeakInit() {
       console.log('Creating eSpeakNG instance...');
+      this.ttsReady = false;
       this.tts = new eSpeakNG(
         '/js/espeakng.worker.js',
-        function cb1() {
-          // document.body.classList.remove('loading');
+        () => {
+          this.ttsReady = true;
+          console.log('eSpeakNG ready');
+          // 若在引擎就緒前已有播放請求，這裡補播
+          const pending = this.pendingText;
+          this.pendingText = null;
+          if (pending) {
+            this.espeakSpeakText(pending);
+          }
         }
       );
       console.log('Creating eSpeakNG instance... done');
     }
 
     espeakStopPlay() {
+      this.pendingText = null;
       if (this.pusher) {
         this.pusher.disconnect();
         this.pusher = null;
@@ -364,6 +376,16 @@ var chunkID = 0;
         this.ctx.resume();
       }
       this.espeakStopPlay();
+
+      // 引擎尚未初始化或尚未就緒時，先記下請求，等引擎就緒後再播
+      if (!this.tts || !this.ttsReady) {
+        this.pendingText = user_text;
+        if (!this.tts) {
+          this.espeakInit();
+        }
+        return;
+      }
+
        this.beginSynthesisSession();
 
       this.tts.set_rate(Number(document.getElementById('rate').value));
