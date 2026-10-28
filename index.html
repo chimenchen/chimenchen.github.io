@@ -213,7 +213,8 @@
                 if ('serviceWorker' in navigator) {
                     try {
                         // 註冊 Service Worker
-                        this.registration = await navigator.serviceWorker.register('/sw.js');
+                        // updateViaCache:'none' —— 保證 sw.js 總走網絡，避免被 HTTP 緩存卡在舊版本
+                        this.registration = await navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' });
                         console.log('Service Worker 註冊成功');
 
                         // 設置更新檢查

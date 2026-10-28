@@ -15,16 +15,31 @@
       else if (document.body) { document.body.textContent = msg; }
       });
     </script>
-    <link rel="preload" href="/evolution-web_bg.wasm?v=1.0.625" as="fetch" type="application/wasm" crossorigin="">
-    <link rel="modulepreload" href="/evolution-web.js?v=1.0.625">
+    <link rel="preload" href="/evolution-web_bg.wasm?v=1.0.626" as="fetch" type="application/wasm" crossorigin="">
+    <link rel="modulepreload" href="/evolution-web.js?v=1.0.626">
     <script type="module">
-      import init from '/evolution-web.js?v=1.0.625';
+      import init from '/evolution-web.js?v=1.0.626';
       (async function startApp() {
       try {
-      await init({ url: '/evolution-web_bg.wasm?v=1.0.625' });
+      await init({ url: '/evolution-web_bg.wasm?v=1.0.626' });
       try { sessionStorage.removeItem('__assetReload'); } catch (e) { /* 忽略 */ }
       } catch (error) {
       console.error(error);
+      try {
+      if (!sessionStorage.getItem('__cacheReset')) {
+      sessionStorage.setItem('__cacheReset', '1');
+      if (window.caches && caches.keys) {
+      const keys = await caches.keys();
+      await Promise.all(keys.map(function (k) { return caches.delete(k); }));
+      }
+      if (navigator.serviceWorker && navigator.serviceWorker.getRegistrations) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map(function (r) { return r.unregister(); }));
+      }
+      location.reload();
+      return;
+      }
+      } catch (e) { /* 忽略 */ }
       const msg = String(error && error.message ? error.message : error);
       // JS 膠水與 wasm 版本不匹配時，自動刷新一次以取得一致的資源
       if (/LinkError|import object field/i.test(msg)) {
