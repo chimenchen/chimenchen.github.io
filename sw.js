@@ -1,7 +1,10 @@
-const CACHE_VERSION = '1.0.611';
+const CACHE_VERSION = '1.0.614';
 const CACHE_NAME = `koukoushengsheng-${CACHE_VERSION}`;
 
-// 首次安裝時只預緩存「小文件」（HTML/CSS/JS/圖標）。
+// 首次安裝時只預緩存「小文件」（HTML/CSS/圖標）。
+// 各應用的 xxx-web.js / xxx-web_bg.wasm 由頁面以 "?v=<版本>" 的 URL 請求，
+// 首次使用時才緩存——版本化的 URL 保證 js 與 wasm 永遠出自同一次構建，
+// 不會出現「舊膠水 + 新 wasm」的 LinkError。
 // wasm 主程序、字體、espeak 語音數據等大文件改為「首次使用時才緩存」（見 fetch 處理），
 // 避免首次訪問時在後台下載上百 MB 而拖慢頁面加載。
 const urlsToCache = [
@@ -9,25 +12,20 @@ const urlsToCache = [
     '/index.html',
 
     '/duyinzdic.html',
-    '/duyinzdic-web.js',
     '/duyin.html',
-    '/duyin-web.js',
 
     '/duyin.css',
     '/js/espeakng.js',
     '/js/zhongwen_speak.js',
 
     '/yunpu.html',
-    '/yunpu-web.js',
     '/js/yunpu_page.js',
     '/js/yunpu_chart.js',
 
     '/xilian.html',
-    '/xilian-web.js',
     '/js/xilian_chart.js',
 
     '/evolution.html',
-    '/evolution-web.js',
 
     '/favicon.ico',
     '/manifest.json',

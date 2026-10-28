@@ -5,13 +5,30 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>演化圖</title>
     <script src="/js/evolution_chart.js"></script>
-    <link rel="preload" href="/evolution-web_bg.wasm" as="fetch" type="application/wasm" crossorigin="">
-    <link rel="modulepreload" href="/evolution-web.js">
+    <link rel="preload" href="/evolution-web_bg.wasm?v=1.0.614" as="fetch" type="application/wasm" crossorigin="">
+    <link rel="modulepreload" href="/evolution-web.js?v=1.0.614">
     <script type="module">
-      import init from '/evolution-web.js';
-      init({
-      url: '/evolution-web_bg.wasm'
-      });
+      import init from '/evolution-web.js?v=1.0.614';
+      (async function startApp() {
+      try {
+      await init({ url: '/evolution-web_bg.wasm?v=1.0.614' });
+      try { sessionStorage.removeItem('__assetReload'); } catch (e) { /* 忽略 */ }
+      } catch (error) {
+      console.error(error);
+      const msg = String(error && error.message ? error.message : error);
+      // JS 膠水與 wasm 版本不匹配時，自動刷新一次以取得一致的資源
+      if (/LinkError|import object field/i.test(msg)) {
+      try {
+      if (!sessionStorage.getItem('__assetReload')) {
+      sessionStorage.setItem('__assetReload', '1');
+      location.reload();
+      return;
+      }
+      } catch (e) { /* 忽略 */ }
+      }
+      document.body.textContent = '加載失敗：' + msg + '。請刷新頁面重試，或更換瀏覽器。';
+      }
+      })();
     </script>
     <base target="_parent">
     </head>
