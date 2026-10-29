@@ -951,6 +951,10 @@ output.video-preview-mode {
   margin: 0;
 }
 .video-preview-bar .input-label {
+  display: inline-flex;
+  align-items: center;
+  height: 1.7em;
+  line-height: 1.7em;
   font-size: 0.9em;
   opacity: 0.75;
   white-space: nowrap;
@@ -963,16 +967,22 @@ output.video-preview-mode {
   padding: 0 0.3em;
   height: 1.7em;
   min-height: 0;
-  line-height: 1.1;
+  line-height: 1.7em;
+  vertical-align: middle;
+  box-sizing: border-box;
 }
-
-.video-preview-page {
-  display: inline-flex;
-  align-items: center;
-  line-height: 1;
-  white-space: nowrap;
-  font-size: 0.9em;
-  opacity: 0.85;
+.video-preview-bar input[type=button],
+.video-preview-bar button {
+  border: none;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+  font-size: 1.15em;
+  padding: 0 0.15em;
+}
+.video-preview-bar input[type=button]:hover,
+.video-preview-bar button:hover {
+  opacity: 0.7;
 }
 
 .video-preview-head {
