@@ -899,3 +899,12 @@ output.fullscreen-mode.ppt-mode.vertical-mode .biaoyin-page {
   margin-left: auto !important;
   margin-right: auto !important;
 }
+
+.video-frame .biaoyin-page,
+.video-cover-page .biaoyin-page,
+.video-preview .biaoyin-page {
+  border: none;
+  box-shadow: none;
+  border-radius: 0;
+  background: transparent;
+}

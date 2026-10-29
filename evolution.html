@@ -15,13 +15,13 @@
       else if (document.body) { document.body.textContent = msg; }
       });
     </script>
-    <link rel="preload" href="/evolution-web_bg.wasm?v=1.0.645" as="fetch" type="application/wasm" crossorigin="">
-    <link rel="modulepreload" href="/evolution-web.js?v=1.0.645">
+    <link rel="preload" href="/evolution-web_bg.wasm?v=1.0.646" as="fetch" type="application/wasm" crossorigin="">
+    <link rel="modulepreload" href="/evolution-web.js?v=1.0.646">
     <script type="module">
-      import init from '/evolution-web.js?v=1.0.645';
+      import init from '/evolution-web.js?v=1.0.646';
       (async function startApp() {
       try {
-      await init({ url: '/evolution-web_bg.wasm?v=1.0.645' });
+      await init({ url: '/evolution-web_bg.wasm?v=1.0.646' });
       try { sessionStorage.removeItem('__assetReload'); } catch (e) { /* 忽略 */ }
       } catch (error) {
       console.error(error);
