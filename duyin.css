@@ -928,17 +928,48 @@ output.fullscreen-mode.ppt-mode.vertical-mode .biaoyin-page {
   display: none;
 }
 
+output.video-preview-mode {
+  writing-mode: horizontal-tb;
+  direction: ltr;
+}
+
 .video-preview-bar {
+  writing-mode: horizontal-tb !important;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.5em;
+  gap: 0.4em;
   margin-bottom: 0.4em;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-size: 0.75em;
+  line-height: 1.2;
+}
+.video-preview-bar label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25em;
+  margin: 0;
+}
+.video-preview-bar .input-label {
+  font-size: 0.9em;
+  opacity: 0.75;
+  white-space: nowrap;
+}
+.video-preview-bar select,
+.video-preview-bar input[type=button],
+.video-preview-bar button {
+  font-family: inherit;
+  font-size: 0.95em;
+  padding: 0 0.3em;
+  height: 1.7em;
+  min-height: 0;
+  line-height: 1.1;
 }
 
 .video-preview-page {
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  font-size: 0.85em;
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
   white-space: nowrap;
 }
 
