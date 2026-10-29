@@ -305,5 +305,16 @@
     return out;
   }
 
-  window.zhongwenVideo = { rasterizePage: rasterizePage, measurePages: measurePages };
+  // 容器「自然尺寸」對應的字號（px）：預覽要按同一個字號渲染，
+  // 否則右欄字號比左欄大時，同一個縮放比例看起來就會偏大、甚至超出畫幅。
+  function baseFontSize(root) {
+    const size = parseFloat(window.getComputedStyle(root).fontSize);
+    return isFinite(size) && size > 0 ? size : 0;
+  }
+
+  window.zhongwenVideo = {
+    rasterizePage: rasterizePage,
+    measurePages: measurePages,
+    baseFontSize: baseFontSize
+  };
 })();

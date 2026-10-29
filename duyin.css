@@ -919,6 +919,10 @@ output.fullscreen-mode.ppt-mode.vertical-mode .biaoyin-page {
   max-width: none;
 }
 
+.video-cover-page svg.tone-line {
+  display: none;
+}
+
 .video-frame .page-footer,
 .video-cover-page .page-footer {
   display: none;
