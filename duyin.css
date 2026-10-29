@@ -940,3 +940,8 @@ output.fullscreen-mode.ppt-mode.vertical-mode .biaoyin-page {
   text-align: center;
   white-space: normal;
 }
+
+.video-frame svg.tone-line,
+.video-measure svg.tone-line {
+  display: none;
+}
