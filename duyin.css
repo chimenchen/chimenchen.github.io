@@ -893,3 +893,9 @@ output.fullscreen-mode.ppt-mode.vertical-mode .biaoyin-page {
   color: #c00;
   opacity: 1;
 }
+
+.video-cover-page .biaoyin-line {
+  justify-content: center !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
