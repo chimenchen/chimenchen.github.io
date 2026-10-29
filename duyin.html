@@ -5,9 +5,9 @@
       <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=yes">
       <title>口口聲聲</title>
       <link rel="stylesheet" href="/duyin.css">
-      <script src="/js/espeakng.js?v=1.0.659"></script>
-      <script src="/js/zhongwen_speak.js?v=1.0.659"></script>
-      <script src="/js/video_export.js?v=1.0.659"></script>
+      <script src="/js/espeakng.js?v=1.0.660"></script>
+      <script src="/js/zhongwen_speak.js?v=1.0.660"></script>
+      <script src="/js/video_export.js?v=1.0.660"></script>
       <script>
         // 老瀏覽器/異常卡死時，15 秒後追加可操作的提示
         document.addEventListener('DOMContentLoaded', function () {
@@ -31,10 +31,10 @@
         else if (document.body) { document.body.textContent = msg; }
         });
       </script>
-      <link rel="preload" href="/duyin-web_bg.wasm?v=1.0.659" as="fetch" type="application/wasm" crossorigin="">
-      <link rel="modulepreload" href="/duyin-web.js?v=1.0.659">
+      <link rel="preload" href="/duyin-web_bg.wasm?v=1.0.660" as="fetch" type="application/wasm" crossorigin="">
+      <link rel="modulepreload" href="/duyin-web.js?v=1.0.660">
       <script type="module">
-        import init from '/duyin-web.js?v=1.0.659';
+        import init from '/duyin-web.js?v=1.0.660';
         // 下載並啟動 wasm：顯示下載進度；失敗時給出明確提示。
         // 舊版瀏覽器可能不支持本程序所需的 WebAssembly 特性，否則會一直停留在「正在思考……」。
         async function startApp() {
@@ -48,7 +48,7 @@
         throw new Error('此瀏覽器不支持 WebAssembly');
         }
         setStatus('正在下載程序……');
-        const response = await fetch('/duyin-web_bg.wasm?v=1.0.659', { credentials: 'omit' });
+        const response = await fetch('/duyin-web_bg.wasm?v=1.0.660', { credentials: 'omit' });
         if (!response.ok) {
         throw new Error('下載失敗（HTTP ' + response.status + '）');
         }
