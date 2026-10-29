@@ -884,3 +884,12 @@ output.fullscreen-mode.ppt-mode.vertical-mode .biaoyin-page {
 .piano-roll-export-button:active {
   transform: translateY(1px);
 }
+
+.video-page-fit {
+  font-size: 0.85em;
+  opacity: 0.85;
+}
+.video-page-fit.overflow {
+  color: #c00;
+  opacity: 1;
+}
