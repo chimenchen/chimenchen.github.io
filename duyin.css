@@ -908,3 +908,35 @@ output.fullscreen-mode.ppt-mode.vertical-mode .biaoyin-page {
   border-radius: 0;
   background: transparent;
 }
+
+.video-measure .biaoyin-line,
+.video-frame .biaoyin-line {
+  flex-wrap: nowrap !important;
+}
+
+.video-frame {
+  width: max-content;
+  max-width: none;
+}
+
+.video-frame .page-footer,
+.video-cover-page .page-footer {
+  display: none;
+}
+
+.video-preview-head {
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-size: 0.85em;
+  opacity: 0.75;
+  margin-bottom: 0.4em;
+  white-space: normal;
+  word-break: break-word;
+}
+
+.video-cover-text {
+  font-size: 0.6em;
+  opacity: 0.8;
+  margin-bottom: 0.8em;
+  text-align: center;
+  white-space: normal;
+}
