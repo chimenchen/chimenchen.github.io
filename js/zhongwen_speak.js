@@ -253,7 +253,15 @@ var chunkID = 0;
                 // encodeWav 返回 ArrayBuffer，這裡統一成 Uint8Array 交給 wasm 端
                 resolve(wavBuffer instanceof Uint8Array ? wavBuffer : new Uint8Array(wavBuffer));
               } else {
-                chunks.push(samples instanceof Float32Array ? samples : new Float32Array(samples));
+                // 注意：eSpeakNG 的 synthesize 回傳的是「雙聲道交錯」的 Float32Array
+                // （每個採樣重複寫兩次：data[i*2] 與 data[i*2+1]）。
+                // 直接當單聲道編碼會變成「慢一倍、低一個八度」，所以這裡取左聲道。
+                const src = samples instanceof Float32Array ? samples : new Float32Array(samples);
+                const mono = new Float32Array(src.length >> 1);
+                for (let i = 0; i < mono.length; i++) {
+                  mono[i] = src[i * 2];
+                }
+                chunks.push(mono);
               }
             });
           } catch (err) {
