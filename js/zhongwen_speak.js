@@ -214,6 +214,76 @@ var chunkID = 0;
       return mergedBuffer;
     }
 
+    // 離線合成（不播放、不影響當前播放）：返回該段文本的 WAV 位元組
+    // 用於「視頻導出」把每一頁合成成 audio/xxxx.wav（espeak 的採樣率固定 22050）
+    synthesizeWavOffline(text) {
+      return new Promise((resolve) => {
+        const run = () => {
+          const rateEl = document.getElementById('rate');
+          const pitchEl = document.getElementById('pitch');
+          const voiceEl = document.getElementById('voice');
+          try {
+            this.tts.set_rate(Number(rateEl ? rateEl.value : 120));
+            this.tts.set_pitch(Number(pitchEl ? pitchEl.value : 40));
+            this.tts.set_voice(voiceEl ? voiceEl.value : 'ipa+m7');
+          } catch (err) {
+            console.warn('synthesizeWavOffline: set_* failed', err);
+          }
+          const chunks = [];
+          let finished = false;
+          try {
+            this.tts.synthesize(text, (samples) => {
+              if (finished) {
+                return;
+              }
+              if (!samples) {
+                finished = true;
+                if (!chunks.length) {
+                  resolve(null);
+                  return;
+                }
+                const total = chunks.reduce((sum, c) => sum + c.length, 0);
+                const merged = new Float32Array(total);
+                let offset = 0;
+                for (const c of chunks) {
+                  merged.set(c, offset);
+                  offset += c.length;
+                }
+                const wavBuffer = this.encodeWav(merged, 22050);
+                // encodeWav 返回 ArrayBuffer，這裡統一成 Uint8Array 交給 wasm 端
+                resolve(wavBuffer instanceof Uint8Array ? wavBuffer : new Uint8Array(wavBuffer));
+              } else {
+                chunks.push(samples instanceof Float32Array ? samples : new Float32Array(samples));
+              }
+            });
+          } catch (err) {
+            console.error('synthesizeWavOffline failed', err);
+            resolve(null);
+          }
+        };
+
+        if (this.tts && this.ttsReady) {
+          run();
+          return;
+        }
+        if (!this.tts) {
+          this.espeakInit();
+        }
+        let waited = 0;
+        const timer = setInterval(() => {
+          waited += 200;
+          if (this.tts && this.ttsReady) {
+            clearInterval(timer);
+            run();
+          } else if (waited > 30000) {
+            clearInterval(timer);
+            console.warn('synthesizeWavOffline: engine not ready');
+            resolve(null);
+          }
+        }, 200);
+      });
+    }
+
     encodeWav(samples, sampleRate) {
       const buffer = new ArrayBuffer(44 + samples.length * 2);
       const view = new DataView(buffer);
@@ -444,7 +514,8 @@ var chunkID = 0;
     espeakSpeakTextInTextarea: zhongwenSpeech.espeakSpeakTextInTextarea.bind(zhongwenSpeech),
     espeakReplayLastAudio: zhongwenSpeech.espeakReplayLastAudio.bind(zhongwenSpeech),
     espeakDownloadLastAudio: zhongwenSpeech.espeakDownloadLastAudio.bind(zhongwenSpeech),
-    espeakSetFilenamePrefix: zhongwenSpeech.setFilenamePrefix.bind(zhongwenSpeech)
+    espeakSetFilenamePrefix: zhongwenSpeech.setFilenamePrefix.bind(zhongwenSpeech),
+    synthesizeWavOffline: zhongwenSpeech.synthesizeWavOffline.bind(zhongwenSpeech)
   };
 
   // 為了向後兼容，保留全局函數
