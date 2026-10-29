@@ -145,6 +145,10 @@
   }
 
   // 一頁的內容：文字段 + SVG，以及它們的外接框
+  // 安全邊距：文字外接框量到的是「盒子」，實際墨跡可能略超出（標點懸掛、字體溢出），
+  // 留 3% 邊距，避免 97% 寬的頁面在邊緣被切掉。
+  const PADDING_RATIO = 0.03;
+
   function pageContent(el) {
     const runs = collectRuns(el);
     const svgs = collectSvgs(el);
@@ -164,8 +168,20 @@
     svgs.forEach(function (s) {
       addRect(s.rect);
     });
-    const empty = !isFinite(minX);
-    return { runs: runs, svgs: svgs, minX: minX, minY: minY, maxX: maxX, maxY: maxY, empty: empty };
+    if (!isFinite(minX)) {
+      return { runs: runs, svgs: svgs, minX: 0, minY: 0, maxX: 0, maxY: 0, empty: true };
+    }
+    const padX = (maxX - minX) * PADDING_RATIO;
+    const padY = (maxY - minY) * PADDING_RATIO;
+    return {
+      runs: runs,
+      svgs: svgs,
+      minX: minX - padX,
+      minY: minY - padY,
+      maxX: maxX + padX,
+      maxY: maxY + padY,
+      empty: false,
+    };
   }
 
   /**
@@ -196,8 +212,20 @@
       return new Uint8Array(await blob.arrayBuffer());
     }
 
-    const offX = (frameW - (content.maxX - content.minX) * scale) / 2;
-    const offY = (frameH - (content.maxY - content.minY) * scale) / 2;
+    // 保險：內容若仍超出畫幅，等比縮到剛好放得下（居中不變）
+    const contentW = content.maxX - content.minX;
+    const contentH = content.maxY - content.minY;
+    let effScale = scale;
+    if (contentW > 0 && contentW * effScale > frameW) {
+      effScale = frameW / contentW;
+    }
+    if (contentH > 0 && contentH * effScale > frameH) {
+      effScale = frameH / contentH;
+    }
+    scale = effScale;
+
+    const offX = (frameW - contentW * scale) / 2;
+    const offY = (frameH - contentH * scale) / 2;
     const toX = function (x) {
       return (offX + (x - content.minX) * scale) * dpr;
     };

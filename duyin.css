@@ -924,6 +924,20 @@ output.fullscreen-mode.ppt-mode.vertical-mode .biaoyin-page {
   display: none;
 }
 
+.video-preview-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5em;
+  margin-bottom: 0.4em;
+}
+
+.video-preview-page {
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-size: 0.85em;
+  white-space: nowrap;
+}
+
 .video-preview-head {
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   font-size: 0.85em;

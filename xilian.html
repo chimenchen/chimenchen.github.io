@@ -60,10 +60,10 @@
         else if (document.body) { document.body.textContent = msg; }
         });
       </script>
-      <link rel="preload" href="/xilian-web_bg.wasm?v=1.0.661" as="fetch" type="application/wasm" crossorigin="">
-      <link rel="modulepreload" href="/xilian-web.js?v=1.0.661">
+      <link rel="preload" href="/xilian-web_bg.wasm?v=1.0.663" as="fetch" type="application/wasm" crossorigin="">
+      <link rel="modulepreload" href="/xilian-web.js?v=1.0.663">
       <script type="module">
-        import init from '/xilian-web.js?v=1.0.661';
+        import init from '/xilian-web.js?v=1.0.663';
         // 下載並啟動 wasm：顯示下載進度；失敗時給出明確提示。
         async function startApp() {
         const statusEl = document.getElementById('splash-status');
@@ -76,7 +76,7 @@
         throw new Error('此瀏覽器不支持 WebAssembly');
         }
         setStatus('正在下載程序……');
-        const response = await fetch('/xilian-web_bg.wasm?v=1.0.661', { credentials: 'omit' });
+        const response = await fetch('/xilian-web_bg.wasm?v=1.0.663', { credentials: 'omit' });
         if (!response.ok) {
         throw new Error('下載失敗（HTTP ' + response.status + '）');
         }
