@@ -108,16 +108,32 @@
     ctx.fillStyle = resolveBg(bgColor);
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    const box = el.getBoundingClientRect();
-    const offX = (frameW - box.width * scale) / 2;
-    const offY = (frameH - box.height * scale) / 2;
+    // 以「實際文字的外接框」居中，而不是頁面元素的盒子：
+    // 頁面盒子常常比文字寬（max-content / padding / 空行），用它居中會讓內容偏左。
+    const runs = collectRuns(el);
+    if (!runs.length) {
+      const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+      return new Uint8Array(await blob.arrayBuffer());
+    }
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+    for (const run of runs) {
+      minX = Math.min(minX, run.rect.left);
+      minY = Math.min(minY, run.rect.top);
+      maxX = Math.max(maxX, run.rect.right);
+      maxY = Math.max(maxY, run.rect.bottom);
+    }
+    const offX = (frameW - (maxX - minX) * scale) / 2;
+    const offY = (frameH - (maxY - minY) * scale) / 2;
 
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
 
-    for (const run of collectRuns(el)) {
-      const x = (offX + (run.rect.left - box.left) * scale) * dpr;
-      const y = (offY + (run.rect.top - box.top) * scale) * dpr;
+    for (const run of runs) {
+      const x = (offX + (run.rect.left - minX) * scale) * dpr;
+      const y = (offY + (run.rect.top - minY) * scale) * dpr;
       const w = run.rect.width * scale * dpr;
       const h = run.rect.height * scale * dpr;
 
