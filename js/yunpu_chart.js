@@ -614,6 +614,24 @@
             };
             delete option.relationTooltip;
         }
+        // layout:'none' 的節點用歸一化座標（nx/ny）傳來，這裡依容器實際尺寸換算成像素
+        try {
+            const series = (option.series || [])[0];
+            if (series && series.layout === 'none' && Array.isArray(series.data)) {
+                const W = Math.max(320, chartDom.clientWidth || 800);
+                const H = Math.max(240, chartDom.clientHeight || 500);
+                const mx = 30;
+                const my = 26;
+                series.data.forEach((n) => {
+                    if (typeof n.nx === 'number' && typeof n.ny === 'number') {
+                        n.x = mx + n.nx * (W - mx * 2);
+                        n.y = my + n.ny * (H - my * 2);
+                    }
+                });
+            }
+        } catch (e) {
+            /* ignore */
+        }
         let inst = echarts.getInstanceByDom(chartDom);
         if (!inst) {
             inst = echarts.init(chartDom);
