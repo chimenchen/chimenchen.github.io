@@ -401,14 +401,6 @@ function __wbg_get_imports() {
             state0.a = state0.b = 0;
         }
     };
-    imports.wbg.__wbg_resizeChart_8e80f2e33d5c820c = function(arg0) {
-        const ret = yunpuChart.resizeChart(getObject(arg0));
-        return ret;
-    };
-    imports.wbg.__wbg_createRelationChart_4264e5a1e83e97b0 = function(arg0, arg1, arg2) {
-        const ret = yunpuChart.createRelationChart(getObject(arg0), getStringFromWasm0(arg1, arg2));
-        return addHeapObject(ret);
-    };
     imports.wbg.__wbg_time_a9055abac429ae39 = function(arg0, arg1) {
         console.time(getStringFromWasm0(arg0, arg1));
     };
@@ -417,6 +409,14 @@ function __wbg_get_imports() {
     };
     imports.wbg.__wbg_createOrUpdateChart_6cbe8faeb3e36554 = function(arg0, arg1, arg2, arg3) {
         const ret = yunpuChart.createOrUpdateChart(getObject(arg0), getStringFromWasm0(arg1, arg2), arg3 !== 0);
+        return addHeapObject(ret);
+    };
+    imports.wbg.__wbg_resizeChart_8e80f2e33d5c820c = function(arg0) {
+        const ret = yunpuChart.resizeChart(getObject(arg0));
+        return ret;
+    };
+    imports.wbg.__wbg_createRelationChart_4264e5a1e83e97b0 = function(arg0, arg1, arg2) {
+        const ret = yunpuChart.createRelationChart(getObject(arg0), getStringFromWasm0(arg1, arg2));
         return addHeapObject(ret);
     };
     imports.wbg.__wbg_new_525245e2b9901204 = function() {
@@ -1124,7 +1124,7 @@ function __wbg_get_imports() {
         const ret = getObject(arg0).cloneNode(arg1 !== 0);
         return addHeapObject(ret);
     }, arguments) };
-    imports.wbg.__wbindgen_closure_wrapper990 = function(arg0, arg1, arg2) {
+    imports.wbg.__wbindgen_closure_wrapper992 = function(arg0, arg1, arg2) {
         const ret = makeMutClosure(arg0, arg1, 83, __wbg_adapter_28);
         return addHeapObject(ret);
     };
