@@ -182,8 +182,11 @@
             }
         }
 
-        // 保存節點大小信息
+        // 保存節點大小信息（每次都重新建立，否則重複 setOption 會讓索引錯位 → 縮放時大小亂跳）
         saveNodeSizes(data) {
+            this.originalSymbolSizes = [];
+            this.originalNodeLabelFontSizes = [];
+            this.originalBorderWidths = [];
             data.forEach(node => {
                 this.originalSymbolSizes.push(node.symbolSize || null);
                 this.originalNodeLabelFontSizes.push(node.label && node.label.fontSize || null);
@@ -219,41 +222,55 @@
             window.addEventListener('resize', this.throttle(this.handleResize.bind(this), this.throttleDelay));
         }
 
-        throttledHandleGraphRoam() {
-            if (this.graphRoamTimer) {
-                clearTimeout(this.graphRoamTimer);
+        // 縮放事件：用 requestAnimationFrame 合併（比 setTimeout 更貼近繪製節奏），
+        // 並記錄事件給的 zoom（避免 getOption() 讀到落後的狀態）
+        throttledHandleGraphRoam(params) {
+            if (params && typeof params.zoom === 'number') {
+                this.pendingZoom = params.zoom;
             }
-
-            this.graphRoamTimer = setTimeout(() => {
+            if (this.graphRoamScheduled) {
+                return;
+            }
+            this.graphRoamScheduled = true;
+            const run = () => {
+                this.graphRoamScheduled = false;
+                if (this.applyingZoom) {
+                    return; // 這次是我們自己 setOption 觸發的，不要再處理，避免回授
+                }
                 this.handleGraphRoam();
-            }, 50);
+            };
+            if (typeof requestAnimationFrame === 'function') {
+                requestAnimationFrame(run);
+            } else {
+                setTimeout(run, 16);
+            }
         }
 
         // 處理圖表縮放事件
+        //
+        // 注意：graphRoam 事件參數裡的 zoom 是「相對倍率」，不是絕對縮放值，
+        // 所以一律讀 getOption().series[0].zoom（在 rAF 之後讀，值已經更新）。
         handleGraphRoam() {
-            const currentView = this.chart.getOption().series[0].zoom;
-            if (currentView != null) {
-                const prevZoom = this.currentZoom;
-                this.currentZoom = Math.max(this.minZoom, Math.min(this.maxZoom, currentView));
-
-                if (this.currentZoom !== prevZoom) {
-                    this.updateChartZoom(this.currentZoom);
-                }
-
-                if (this.currentZoom === this.minZoom || this.currentZoom === this.maxZoom) {
-                    console.log("已達到縮放極限");
-                    // 可以添加視覺反饋
-                } else {
-                    console.log("縮放中", this.currentZoom);
-                }
+            this.pendingZoom = null;
+            let currentView = null;
+            const opt = this.chart.getOption();
+            currentView = opt && opt.series && opt.series[0] ? opt.series[0].zoom : null;
+            if (typeof currentView !== 'number') {
+                return;
             }
+            const next = Math.max(this.minZoom, Math.min(this.maxZoom, currentView));
+            // 變化太小就不重繪（避免連續縮放時每幀 setOption）
+            if (Math.abs(next - this.currentZoom) / Math.max(0.001, this.currentZoom) < 0.03) {
+                return;
+            }
+            this.currentZoom = next;
+            this.updateChartZoom(next);
         }
 
         handleRestore() {
-            // 重置 zoom 值為初始值
+            // 重置 zoom 值為初始值，並把節點大小/字級一併還原
             this.currentZoom = this.initialZoom;
-            
-            console.log("Restored. Current zoom:", this.currentZoom);
+            this.updateChartZoom(this.initialZoom);
         }
 
         // 處理窗口大小變化事件
@@ -276,12 +293,31 @@
             }
         }
 
-        // 更新圖表縮放
+        // 更新圖表縮放：只改節點大小/字級（用 merge 方式補丁，不要整份 option 重設，
+        // 否則會把 roam 的 zoom/center 一併蓋掉 —— 這就是先前「跑飛」的主因）
         updateChartZoom(absoluteZoom) {
-            const option = this.chart.getOption();
-            this.applyZoomToOption(option, absoluteZoom);
-            // console.log("after applyZoomToOption", JSON.stringify(option, null, 2));
-            this.chart.setOption(option);
+            const data = this.updateNodeSizes(this.chart.getOption().series[0].data, absoluteZoom);
+            this.applyingZoom = true;
+            try {
+                this.chart.setOption(
+                    {
+                        series: [
+                            {
+                                data: data,
+                                label: {
+                                    fontSize: this.updateFontSize(
+                                        this.originalSeriesLabelFontSize,
+                                        absoluteZoom
+                                    ),
+                                },
+                            },
+                        ],
+                    },
+                    { lazyUpdate: true }
+                );
+            } finally {
+                this.applyingZoom = false;
+            }
         }
 
         // 更新節點大小
