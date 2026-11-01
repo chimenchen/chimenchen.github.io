@@ -175,10 +175,17 @@
             // 更新 iframe
             iframe.src = app.path;
             
-            // 監聽 iframe 加載完成
-            iframe.onload = () => {
+            // 收起載入提示的時機：以子頁面送來的 app-ready（wasm 就緒）為準。
+            // iframe.onload 只代表 HTML 載入完成，wasm 還在下載，太早收起就是白屏，
+            // 所以 onload 後再等 3 秒當後備（子頁面沒送訊息時才會用到）。
+            let hideTimer = null;
+            const hideSplash = () => {
                 clearTimeout(slowTimer);
+                clearTimeout(hideTimer);
                 document.body.classList.remove('loading');
+            };
+            iframe.onload = () => {
+                hideTimer = setTimeout(hideSplash, 3000);
             };
             
             // 更新按鈕狀態
@@ -190,6 +197,13 @@
             document.title = app.title;
             history.pushState(null, '', `#/${appId}`);
         }
+
+        // 子頁面 wasm 就緒後會 postMessage，這時才收起「正在搬磚」
+        window.addEventListener('message', function (e) {
+            if (e.data && e.data.type === 'app-ready') {
+                document.body.classList.remove('loading');
+            }
+        });
 
         function handleHashChange() {
             const hash = window.location.hash.slice(2); // 移除 '#/'
