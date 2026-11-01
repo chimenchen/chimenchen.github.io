@@ -1,4 +1,4 @@
-const CACHE_VERSION = '1.0.888';
+const CACHE_VERSION = '1.0.889';
 const CACHE_NAME = `koukoushengsheng-${CACHE_VERSION}`;
 
 // 首次安裝時只預緩存「小文件」（HTML/CSS/圖標）。
