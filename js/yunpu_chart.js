@@ -614,7 +614,11 @@
                         '<br/>判別：' + d.verdict
                     );
                 }
-                return small + params.name + '<br/>字次：' + round(d.zici);
+                return (
+                    small + params.name +
+                    '<br/>字次：' + round(d.zici) +
+                    '<br/>自押：' + round(d.self_count) + ' 次'
+                );
             };
             delete option.relationTooltip;
         }
