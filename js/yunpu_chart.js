@@ -601,16 +601,20 @@
             const round = (v) => (typeof v === 'number' ? String(Math.round(v * 10) / 10) : v);
             option.tooltip.formatter = function (params) {
                 const d = params.data || {};
+                const small = d.enough === false ? '<b>樣本不足</b><br/>' : '';
                 if (params.dataType === 'edge' || d.kind === 'link') {
                     return (
+                        small +
                         params.data.source + ' ↔ ' + params.data.target +
                         '<br/>離合指數：' + round(d.index_value) +
                         '<br/>合押：' + round(d.heya) +
                         '；自押 ' + round(d.aa) + ' / ' + round(d.bb) +
-                        '<br/>判別：' + d.verdict + (d.enough ? '' : '（樣本不足）')
+                        '<br/>字次：' + round(d.zici_a) + ' / ' + round(d.zici_b) +
+                        '<br/>卡方：' + round(d.chi) + '；z：' + round(d.z) +
+                        '<br/>判別：' + d.verdict
                     );
                 }
-                return params.name + '<br/>字次：' + round(d.zici);
+                return small + params.name + '<br/>字次：' + round(d.zici);
             };
             delete option.relationTooltip;
         }
