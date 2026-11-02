@@ -59,10 +59,54 @@
             // 拖拽交回 ECharts 預設行為（自己實作容易出錯，已放棄）
             option.tooltip = option.tooltip || {};
             option.tooltip.position = makeTooltipPosition(chart);
+            // hover 只顯示一行摘要；完整內容（原本的 desc）改成點擊後顯示在右側面板
+            option.tooltip.formatter = function (params) {
+                var d = params && params.data;
+                if (!d) return '';
+                return d.short ? d.short : (d.desc || '');
+            };
             chart.setOption(option);
+            installDetailPanel(chart);
             return true;
         },
     };
+
+    // 點擊節點／連線 → 右側面板顯示完整內容（hover 只給一行摘要，不會擋住圖）
+    function installDetailPanel(chart) {
+        var host = chart.getDom().parentElement;
+        if (!host) return;
+        if (host.querySelector('.evo-detail')) return;
+        host.classList.add('evo-with-detail');
+        var aside = document.createElement('aside');
+        aside.className = 'evo-detail';
+        aside.innerHTML =
+            '<div class="evo-detail-head">' +
+            '<span class="evo-detail-title">詳情</span>' +
+            '<button type="button" class="evo-detail-close" title="關閉">✕</button>' +
+            '</div><div class="evo-detail-body"></div>';
+        host.appendChild(aside);
+        // 面板開合會改變圖表寬度，ECharts 必須重新量測，否則畫布會被拉糊
+        function afterToggle() {
+            setTimeout(function () {
+                try { chart.resize(); } catch (e) { /* 忽略 */ }
+            }, 200);
+        }
+        aside.querySelector('.evo-detail-close').addEventListener('click', function () {
+            aside.classList.remove('open');
+            afterToggle();
+        });
+        chart.on('click', function (params) {
+            var d = params && params.data;
+            if (!d || !d.desc) {
+                aside.classList.remove('open');
+                afterToggle();
+                return;
+            }
+            aside.querySelector('.evo-detail-body').innerHTML = d.desc;
+            aside.classList.add('open');
+            afterToggle();
+        });
+    }
 
     // tooltip 位置：以「被 hover 的節點方框」為準，在 右／左／下／上 四個方向中選一個
     // 「不覆蓋節點、且顯示得最完整（落在視窗內的面積最大）」的位置。
