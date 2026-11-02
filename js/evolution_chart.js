@@ -44,11 +44,14 @@
 
     window.evolutionChart = {
         // 初始化圖表：等 echarts 就緒 → 清除舊實例 → 返回新實例
-        initAsync: async function (dom) {
+        // reset=true 時重建實例（清掉拖動等狀態）；否則重用現有實例，保留當前狀態
+        initAsync: async function (dom, reset) {
             await ensureEcharts();
-            const old = document.querySelector('.evolution-graph div');
-            if (old) {
-                try { window.echarts.dispose(old); } catch (e) { /* 忽略 */ }
+            if (reset) {
+                try { window.echarts.dispose(dom); } catch (e) { /* 忽略 */ }
+            } else {
+                const existing = window.echarts.getInstanceByDom(dom);
+                if (existing && !existing.isDisposed()) return existing;
             }
             return window.echarts.init(dom);
         },
