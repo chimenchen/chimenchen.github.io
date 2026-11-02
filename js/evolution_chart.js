@@ -68,16 +68,40 @@
             };
             chart.setOption(option);
             installDetailPanel(chart);
-            // 容器高度可能剛被 Rust 改過，重新量測（否則 canvas 仍是舊尺寸 → 「節點沒變高」）
-            setTimeout(function () {
-                try { chart.resize(); } catch (e) { /* 忽略 */ }
-            }, 0);
+            // 容器尺寸由 Rust 的 Yew 重繪決定，時機比 setOption 晚；
+            // 用 ResizeObserver 監看容器，尺寸一變就 resize（修「節點有時沒變高」）。
+            watchSize(chart);
             window.__evoResize = function () {
                 try { chart.resize(); } catch (e) { /* 忽略 */ }
             };
             return true;
         },
     };
+
+
+    // 監看圖表容器尺寸：Rust 改高度、面板開合都會改變容器大小，
+    // 沒 resize 的話 canvas 還是舊尺寸（看起來就是「節點高度沒變」）。
+    function watchSize(chart) {
+        var el = chart.getDom();
+        var sync = function () {
+            if (chart.isDisposed && chart.isDisposed()) return;
+            var w = el.clientWidth;
+            var h = el.clientHeight;
+            if (w > 0 && h > 0 && (Math.abs(chart.getWidth() - w) > 1 || Math.abs(chart.getHeight() - h) > 1)) {
+                try { chart.resize(); } catch (e) { /* 忽略 */ }
+            }
+        };
+        if (!chart.__evoSizeObserved && typeof ResizeObserver !== 'undefined') {
+            chart.__evoSizeObserved = new ResizeObserver(sync);
+            chart.__evoSizeObserved.observe(el);
+        }
+        // 保險：前 1 秒內逐幀比對（Yew 重繪可能比 ResizeObserver 回呼更晚一點）
+        var tries = 0;
+        (function tick() {
+            sync();
+            if (++tries < 60) requestAnimationFrame(tick);
+        })();
+    }
 
     // 點擊節點／連線 → 通知 Rust 顯示右側詳情面板（面板本身由 Yew 渲染，較穩定）
     function installDetailPanel(chart) {
