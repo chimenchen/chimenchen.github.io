@@ -56,12 +56,10 @@
         // 設置圖表配置
         setOptionAsync: async function (chart, option) {
             await ensureEcharts();
-            // 保留 ECharts 的拖拽（實測最可靠），鬆手後由我們的 handler 依 y 重排並歸位到原欄
-            if (option.series && option.series[0]) option.series[0].draggable = true;
+            // 拖拽交回 ECharts 預設行為（自己實作容易出錯，已放棄）
             option.tooltip = option.tooltip || {};
             option.tooltip.position = makeTooltipPosition(chart);
             chart.setOption(option);
-            installDrag(chart);
             return true;
         },
     };
@@ -74,11 +72,13 @@
             var box = chart.getDom().getBoundingClientRect();
             var scrollX = window.pageXOffset || 0;
             var scrollY = window.pageYOffset || 0;
-            var w = size.contentSize[0];
-            var h = size.contentSize[1];
             var gap = 12;
             var viewW = window.innerWidth;
             var viewH = window.innerHeight;
+            // CSS 有 max-width: min(90vw, 560px) / max-height: 60vh，實際尺寸會被裁；
+            // contentSize 給的是未裁的尺寸，這裡取兩者較小值才是真正畫出來的大小。
+            var w = Math.min(size.contentSize[0], Math.min(viewW * 0.9, 380));
+            var h = Math.min(size.contentSize[1], viewH * 0.45);
 
             // 節點方框（系列座標 + 系列平移量）
             var node = null;
@@ -142,146 +142,4 @@
         };
     }
 
-    // 只允許上下拖動：在 document 上以 capture 攔截滑鼠事件（tooltip、標籤文字都會被涵蓋），
-    // 命中節點後只跟踪 y，鬆手時依游標 y 重排該欄。拖動期間隱藏 tooltip。
-    function installDrag(chart) {
-        if (chart.__evoDragInstalled) return;
-        chart.__evoDragInstalled = true;
-        var drag = null;
-
-        function canvasRect() {
-            return chart.getDom().getBoundingClientRect();
-        }
-
-        // 命中測試：節點方框 + 右側標籤區（+70px），允許 ±4px 誤差
-        function hitTest(clientX, clientY) {
-            var box = canvasRect();
-            var off = seriesOffset(chart);
-            var px = clientX - box.left - off.x;
-            var py = clientY - box.top - off.y;
-            if (px < 0 || py < 0 || px > box.width || py > box.height) return null;
-            var data = chart.getModel().getSeriesByIndex(0).getData();
-            var best = null;
-            for (var i = 0; i < data.count(); i++) {
-                var L = data.getItemLayout(i);
-                if (!L) continue;
-                var w = L.dx || 20;
-                var h = L.dy || 20;
-                if (px >= L.x - 4 && px <= L.x + w + 70 && py >= L.y - 4 && py <= L.y + h + 4) {
-                    // 取最靠近游標中心的那一個（避免大節點搶走）
-                    var d = Math.abs(py - (L.y + h / 2));
-                    if (!best || d < best.d) best = { index: i, x: L.x, d: d };
-                }
-            }
-            return best;
-        }
-
-        document.addEventListener('mousedown', function (e) {
-            if (e.button !== 0) return;
-            var hit = hitTest(e.clientX, e.clientY);
-            if (!hit) return;
-            drag = { index: hit.index, x: hit.x, moved: false, startY: e.clientY };
-            document.body.classList.add('evo-dragging');
-            try { chart.dispatchAction({ type: 'hideTip' }); } catch (err) { /* 忽略 */ }
-        }, true);
-
-        document.addEventListener('mousemove', function (e) {
-            if (!drag) return;
-            if (Math.abs(e.clientY - drag.startY) > 3) drag.moved = true;
-            try { chart.dispatchAction({ type: 'hideTip' }); } catch (err) { /* 忽略 */ }
-        }, true);
-
-        document.addEventListener('mouseup', function (e) {
-            if (!drag) return;
-            var d = drag;
-            drag = null;
-            document.body.classList.remove('evo-dragging');
-            if (!d.moved) return;
-            var box = canvasRect();
-            var off = seriesOffset(chart);
-            try {
-                reorderByY(chart, d.index, d.x, e.clientY - box.top - off.y);
-            } catch (err) {
-                /* 忽略：拖動失敗不影響原圖 */
-            }
-        }, true);
-    }
-
-    // 依游標的 y 找出「插入位置」，把該欄的節點重新排序（連線索引一起重映射）
-    // （掛到 window 上方便除錯；不影響功能）
-    function reorderByY(chart, fromIndex, colX, cursorY) {
-        var option = chart.getOption();
-        var series = option.series[0];
-        var data = series.data.map(function (d) { return d; });
-        var links = series.links.map(function (l) { return l; });
-        var model = chart.getModel().getSeriesByIndex(0).getData();
-
-        // 找出同一欄（x 相同）的節點，依 y 排序
-        var col = [];
-        for (var i = 0; i < data.length; i++) {
-            var L = model.getItemLayout(i);
-            if (!L) continue;
-            if (Math.abs(L.x - colX) < 1.5) col.push({ index: i, y: L.y });
-        }
-        if (col.length < 2) return;
-        col.sort(function (a, b) { return a.y - b.y; });
-        var curPos = -1;
-        for (var k = 0; k < col.length; k++) if (col[k].index === fromIndex) curPos = k;
-        if (curPos < 0) return;
-
-        // 目標位置：數一數有多少節點的中心在游標上方
-        var target = 0;
-        for (var k = 0; k < col.length; k++) {
-            if (col[k].index === fromIndex) continue;
-            if (col[k].y < cursorY) target++;
-        }
-        if (target === curPos) return;
-
-        // 重排這一欄：把被拖動的節點移到 target
-        var seq = col.map(function (c) { return c.index; });
-        seq.splice(curPos, 1);
-        seq.splice(target, 0, fromIndex);
-
-        // 用「欄內位置」重建整個 data 順序（同一欄在 data 中是連續的一段）
-        var start = col[0].index;
-        var newData = data.slice(0, start).concat(seq.map(function (i) { return data[i]; }))
-            .concat(data.slice(start + col.length));
-
-        // 舊索引 → 新索引
-        var map = new Array(data.length);
-        for (var i = 0; i < newData.length; i++) {
-            map[data.indexOf(newData[i])] = i;
-        }
-        // data 內含相同內容的物件時 indexOf 會抓錯，改用標記
-        var tagged = newData.map(function (d) { return d; });
-        var oldToNew = {};
-        var used = {};
-        for (var i = 0; i < data.length; i++) {
-            for (var j = 0; j < tagged.length; j++) {
-                if (!used[j] && tagged[j] === data[i]) { oldToNew[i] = j; used[j] = true; break; }
-            }
-        }
-
-        var newLinks = links.map(function (l) {
-            return {
-                source: oldToNew[l.source] != null ? oldToNew[l.source] : l.source,
-                target: oldToNew[l.target] != null ? oldToNew[l.target] : l.target,
-                value: l.value,
-                tooltip: l.tooltip,
-                lineStyle: l.lineStyle,
-                edgeLabel: l.edgeLabel,
-            };
-        });
-
-        // 節點 id 直接改成新位置（sankey 的 source/target 是 data 位置）
-        var newDataFixed = newData.map(function (d, i) {
-            var copy = {};
-            for (var key in d) copy[key] = d[key];
-            copy.id = i;
-            return copy;
-        });
-
-        chart.setOption({ series: [{ data: newDataFixed, links: newLinks }] });
-    }
-    window.__evoReorder = reorderByY;
 })(window);
