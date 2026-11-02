@@ -44,6 +44,52 @@
 
     window.evolutionChart = {
         // 初始化圖表：等 echarts 就緒 → 清除舊實例 → 返回新實例
+        // 對「目前圖表」導出（供 Rust 按鈕呼叫）
+        exportCurrent: function (format) {
+            if (!window.__evoChart) return false;
+            return window.evolutionChart.exportImage(window.__evoChart, format);
+        },
+
+        // 導出圖片：PNG（點陣，單檔）或 SVG（向量，適合論文/排版）
+        exportImage: async function (chart, format) {
+            await ensureEcharts();
+            var opt = chart.getOption();
+            var w = chart.getWidth();
+            var h = chart.getHeight();
+            // 畫布尺寸上限（瀏覽器 canvas 上限約 32k，實際超過 ~16k 就容易失敗）
+            var maxDim = 16384;
+            var ratio = Math.min(2, maxDim / Math.max(w, h, 1));
+            var bg = (window.getComputedStyle(document.body).backgroundColor || '#ffffff');
+
+            if (format === 'svg') {
+                var host = document.createElement('div');
+                host.style.cssText = 'position:absolute;left:-99999px;top:0;width:' + w + 'px;height:' + h + 'px;';
+                document.body.appendChild(host);
+                try {
+                    var tmp = window.echarts.init(host, null, { renderer: 'svg', width: w, height: h });
+                    tmp.setOption(opt, true);
+                    var svgEl = host.querySelector('svg');
+                    var text = svgEl ? svgEl.outerHTML : '';
+                    tmp.dispose();
+                    if (!text) throw new Error('SVG 生成失敗');
+                    var head = '<?xml version="1.0" encoding="UTF-8"?>\n';
+                    download(new Blob([head + text], { type: 'image/svg+xml;charset=utf-8' }), 'evolution.svg');
+                } finally {
+                    host.remove();
+                }
+                return true;
+            }
+
+            var url = chart.getDataURL({ type: 'png', pixelRatio: ratio, backgroundColor: bg });
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = 'evolution.png';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            return true;
+        },
+
         // reset=true 時重建實例（清掉拖動等狀態）；否則重用現有實例，保留當前狀態
         initAsync: async function (dom, reset) {
             await ensureEcharts();
@@ -71,6 +117,8 @@
             };
             chart.setOption(option);
             installDetailPanel(chart);
+            // 回報 chart 給 Rust（導出圖片要用）
+            window.__evoChart = chart;
             // 容器尺寸由 Rust 的 Yew 重繪決定，時機比 setOption 晚；
             // 用 ResizeObserver 監看容器，尺寸一變就 resize（修「節點有時沒變高」）。
             watchSize(chart);
@@ -104,6 +152,18 @@
             sync();
             if (++tries < 60) requestAnimationFrame(tick);
         })();
+    }
+
+    // 觸發瀏覽器下載
+    function download(blob, filename) {
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
     }
 
     // 點擊節點／連線 → 通知 Rust 顯示右側詳情面板（面板本身由 Yew 渲染，較穩定）
