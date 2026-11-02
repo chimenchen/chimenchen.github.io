@@ -50,76 +50,110 @@
         },
     };
 
-    // tooltip 位置：固定在游標右下方 18px，靠近邊界時翻到另一側。
-    // appendToBody 為 true，所以這裡要回傳「頁面座標」。
+    // tooltip 位置：以「被 hover 的節點方框」為準，放在節點右側（右邊不夠就放左側），
+    // 垂直方向對齊節點中心並夾在可視範圍內——這樣永遠不會蓋住節點，也比較不會擋到別的節點。
+    // appendToBody 為 true，所以要回傳「頁面座標」。
     function makeTooltipPosition(chart) {
         return function (pos, params, dom, rect, size) {
-            var gap = 18;
             var box = chart.getDom().getBoundingClientRect();
             var scrollX = window.pageXOffset || 0;
             var scrollY = window.pageYOffset || 0;
             var w = size.contentSize[0];
             var h = size.contentSize[1];
-            var viewW = window.innerWidth;
-            var viewH = window.innerHeight;
-            var x = box.left + pos[0] + gap;
-            var y = box.top + pos[1] + gap;
-            if (x + w > viewW) x = Math.max(0, box.left + pos[0] - gap - w);
-            if (y + h > viewH) y = Math.max(0, box.top + pos[1] - gap - h);
+            var gap = 14;
+
+            // 節點方框（sankey 的 itemLayout 就是畫布內的像素座標）
+            var nodeBox = null;
+            try {
+                var idx = params && params.dataIndex;
+                if (idx != null && params.dataType === 'node') {
+                    var L = chart.getModel().getSeriesByIndex(0).getData().getItemLayout(idx);
+                    if (L) nodeBox = { x: box.left + L.x, y: box.top + L.y, w: L.dx || 20, h: L.dy || 20 };
+                }
+            } catch (e) { /* 忽略 */ }
+
+            var x, y;
+            if (nodeBox) {
+                // 先試右側，不行再試左側
+                x = nodeBox.x + nodeBox.w + gap;
+                if (x + w > window.innerWidth) {
+                    x = nodeBox.x - gap - w;
+                }
+                y = nodeBox.y + nodeBox.h / 2 - h / 2;
+            } else {
+                x = box.left + pos[0] + gap;
+                y = box.top + pos[1] + gap;
+                if (x + w > window.innerWidth) x = box.left + pos[0] - gap - w;
+                if (y + h > window.innerHeight) y = box.top + pos[1] - gap - h;
+            }
+            // 夾在視窗內
+            x = Math.max(0, Math.min(x, window.innerWidth - w - 4));
+            y = Math.max(0, Math.min(y, window.innerHeight - h - 4));
             return [x + scrollX, y + scrollY];
         };
     }
 
-    // 只允許上下拖動：按下節點後記錄，鬆手時依游標 y 重排該欄（重排＝改 data 順序）。
-    // 拖動期間隱藏 tooltip，避免遮擋。
+    // 只允許上下拖動：在 document 上以 capture 攔截滑鼠事件（tooltip、標籤文字都會被涵蓋），
+    // 命中節點後只跟踪 y，鬆手時依游標 y 重排該欄。拖動期間隱藏 tooltip。
     function installDrag(chart) {
         if (chart.__evoDragInstalled) return;
         chart.__evoDragInstalled = true;
-        var zr = chart.getZr();
-        var root = (zr.painter && zr.painter.getViewportRoot) ? zr.painter.getViewportRoot() : chart.getDom();
         var drag = null;
 
-        function hitTest(px, py) {
+        function canvasRect() {
+            return chart.getDom().getBoundingClientRect();
+        }
+
+        // 命中測試：節點方框 + 右側標籤區（+70px），允許 ±4px 誤差
+        function hitTest(clientX, clientY) {
+            var box = canvasRect();
+            var px = clientX - box.left;
+            var py = clientY - box.top;
+            if (px < 0 || py < 0 || px > box.width || py > box.height) return null;
             var data = chart.getModel().getSeriesByIndex(0).getData();
+            var best = null;
             for (var i = 0; i < data.count(); i++) {
                 var L = data.getItemLayout(i);
                 if (!L) continue;
                 var w = L.dx || 20;
                 var h = L.dy || 20;
-                if (px >= L.x && px <= L.x + w && py >= L.y && py <= L.y + h) {
-                    return { index: i, layout: L };
+                if (px >= L.x - 4 && px <= L.x + w + 70 && py >= L.y - 4 && py <= L.y + h + 4) {
+                    // 取最靠近游標中心的那一個（避免大節點搶走）
+                    var d = Math.abs(py - (L.y + h / 2));
+                    if (!best || d < best.d) best = { index: i, x: L.x, d: d };
                 }
             }
-            return null;
+            return best;
         }
 
-        root.addEventListener('mousedown', function (e) {
+        document.addEventListener('mousedown', function (e) {
             if (e.button !== 0) return;
-            var hit = hitTest(e.offsetX, e.offsetY);
+            var hit = hitTest(e.clientX, e.clientY);
             if (!hit) return;
-            drag = { index: hit.index, x: hit.layout.x, moved: false };
+            drag = { index: hit.index, x: hit.x, moved: false, startY: e.clientY };
             document.body.classList.add('evo-dragging');
-            chart.dispatchAction({ type: 'hideTip' });
-        });
+            try { chart.dispatchAction({ type: 'hideTip' }); } catch (err) { /* 忽略 */ }
+        }, true);
 
-        root.addEventListener('mousemove', function (e) {
+        document.addEventListener('mousemove', function (e) {
             if (!drag) return;
-            drag.moved = true;
-            chart.dispatchAction({ type: 'hideTip' });
-        });
+            if (Math.abs(e.clientY - drag.startY) > 3) drag.moved = true;
+            try { chart.dispatchAction({ type: 'hideTip' }); } catch (err) { /* 忽略 */ }
+        }, true);
 
-        root.addEventListener('mouseup', function (e) {
+        document.addEventListener('mouseup', function (e) {
             if (!drag) return;
             var d = drag;
             drag = null;
             document.body.classList.remove('evo-dragging');
             if (!d.moved) return;
+            var box = canvasRect();
             try {
-                reorderByY(chart, d.index, d.x, e.offsetY);
+                reorderByY(chart, d.index, d.x, e.clientY - box.top);
             } catch (err) {
                 /* 忽略：拖動失敗不影響原圖 */
             }
-        });
+        }, true);
     }
 
     // 依游標的 y 找出「插入位置」，把該欄的節點重新排序（連線索引一起重映射）
