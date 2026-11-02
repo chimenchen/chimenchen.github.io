@@ -166,6 +166,46 @@
         setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
     }
 
+    // 簡單的 HTML 轉義（節點名稱可能含特殊字元）
+    function escapeHtml(t) {
+        return String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    // 點面板裡的「相連 N 條」→ 捲到該節點、高亮、並把面板切換成那個節點
+    function jumpToNode(idx) {
+        var chart = window.__evoChart;
+        if (!chart || isNaN(idx)) return;
+        var data = chart.getModel().getSeriesByIndex(0).getData();
+        var L = data.getItemLayout(idx);
+        var box = chart.getDom().getBoundingClientRect();
+        var off = seriesOffset(chart);
+        if (L) {
+            var pageY = box.top + (window.pageYOffset || 0) + off.y + L.y;
+            window.scrollTo({ top: Math.max(0, pageY - window.innerHeight / 3), behavior: 'smooth' });
+        }
+        try {
+            chart.dispatchAction({ type: 'downplay', seriesIndex: 0 });
+            chart.dispatchAction({ type: 'highlight', seriesIndex: 0, dataIndex: idx });
+        } catch (e) { /* 忽略 */ }
+        var optionData = chart.getOption().series[0].data[idx];
+        if (optionData) {
+            setDetail(buildDetailHtml(chart, { dataType: 'node', dataIndex: idx, data: optionData }, optionData));
+        }
+    }
+
+    // 事件委派：面板內容由 Rust 以 HTML 字串渲染，用 document 層攔截點擊
+    document.addEventListener('click', function (e) {
+        var el = e.target;
+        while (el && el !== document.body) {
+            if (el.classList && el.classList.contains('evo-jump')) {
+                e.preventDefault();
+                jumpToNode(parseInt(el.getAttribute('data-idx'), 10));
+                return;
+            }
+            el = el.parentElement;
+        }
+    }, false);
+
     // 點擊節點／連線 → 通知 Rust 顯示右側詳情面板（面板本身由 Yew 渲染，較穩定）
     function installDetailPanel(chart) {
         if (chart.__evoClickInstalled) return;
@@ -197,10 +237,14 @@
         if (isNode) {
             links.forEach(function (l) {
                 if (l.source !== params.dataIndex && l.target !== params.dataIndex) return;
-                var other = l.source === params.dataIndex ? data[l.target] : data[l.source];
+                var otherIdx = l.source === params.dataIndex ? l.target : l.source;
+                var other = data[otherIdx];
                 if (!other) return;
                 var dir = l.source === params.dataIndex ? '→' : '←';
-                rows.push(dir + ' ' + (other.name || '') + '（' + (l.value || 0) + '字）');
+                rows.push(
+                    '<a href="#" class="evo-jump" data-idx="' + otherIdx + '">' + dir + ' ' +
+                    escapeHtml(other.name || '') + '（' + (l.value || 0) + '字）</a>'
+                );
             });
         }
         var list = '';
