@@ -58,7 +58,8 @@
             await ensureEcharts();
             // 拖拽交回 ECharts 預設行為（自己實作容易出錯，已放棄）
             option.tooltip = option.tooltip || {};
-            option.tooltip.position = makeTooltipPosition(chart);
+            // 位置交回 ECharts 預設（簡單、穩定）；完整顯示由 confine + 尺寸上限保證
+            delete option.tooltip.position;
             // hover 只顯示一行摘要；完整內容（原本的 desc）改成點擊後顯示在右側面板
             option.tooltip.formatter = function (params) {
                 var d = params && params.data;
@@ -67,123 +68,70 @@
             };
             chart.setOption(option);
             installDetailPanel(chart);
+            // 容器高度可能剛被 Rust 改過，重新量測（否則 canvas 仍是舊尺寸 → 「節點沒變高」）
+            setTimeout(function () {
+                try { chart.resize(); } catch (e) { /* 忽略 */ }
+            }, 0);
+            window.__evoResize = function () {
+                try { chart.resize(); } catch (e) { /* 忽略 */ }
+            };
             return true;
         },
     };
 
-    // 點擊節點／連線 → 右側面板顯示完整內容（hover 只給一行摘要，不會擋住圖）
+    // 點擊節點／連線 → 通知 Rust 顯示右側詳情面板（面板本身由 Yew 渲染，較穩定）
     function installDetailPanel(chart) {
-        var host = chart.getDom().parentElement;
-        if (!host) return;
-        if (host.querySelector('.evo-detail')) return;
-        host.classList.add('evo-with-detail');
-        var aside = document.createElement('aside');
-        aside.className = 'evo-detail';
-        aside.innerHTML =
-            '<div class="evo-detail-head">' +
-            '<span class="evo-detail-title">詳情</span>' +
-            '<button type="button" class="evo-detail-close" title="關閉">✕</button>' +
-            '</div><div class="evo-detail-body"></div>';
-        host.appendChild(aside);
-        // 面板開合會改變圖表寬度，ECharts 必須重新量測，否則畫布會被拉糊
-        function afterToggle() {
-            setTimeout(function () {
-                try { chart.resize(); } catch (e) { /* 忽略 */ }
-            }, 200);
-        }
-        aside.querySelector('.evo-detail-close').addEventListener('click', function () {
-            aside.classList.remove('open');
-            afterToggle();
-        });
+        if (chart.__evoClickInstalled) return;
+        chart.__evoClickInstalled = true;
         chart.on('click', function (params) {
             var d = params && params.data;
-            if (!d || !d.desc) {
-                aside.classList.remove('open');
-                afterToggle();
+            if (!d) {
+                setDetail(null);
                 return;
             }
-            aside.querySelector('.evo-detail-body').innerHTML = d.desc;
-            aside.classList.add('open');
-            afterToggle();
+            var html = buildDetailHtml(chart, params, d);
+            setDetail(html);
         });
     }
 
-    // tooltip 位置：以「被 hover 的節點方框」為準，在 右／左／下／上 四個方向中選一個
-    // 「不覆蓋節點、且顯示得最完整（落在視窗內的面積最大）」的位置。
-    // appendToBody 為 true，所以要回傳「頁面座標」。
-    function makeTooltipPosition(chart) {
-        return function (pos, params, dom, rect, size) {
-            var box = chart.getDom().getBoundingClientRect();
-            var scrollX = window.pageXOffset || 0;
-            var scrollY = window.pageYOffset || 0;
-            var gap = 12;
-            var viewW = window.innerWidth;
-            var viewH = window.innerHeight;
-            // CSS 有 max-width: min(90vw, 560px) / max-height: 60vh，實際尺寸會被裁；
-            // contentSize 給的是未裁的尺寸，這裡取兩者較小值才是真正畫出來的大小。
-            var w = Math.min(size.contentSize[0], Math.min(viewW * 0.9, 380));
-            var h = Math.min(size.contentSize[1], viewH * 0.45);
+    function setDetail(html) {
+        if (typeof window.__evoSetDetail === 'function') {
+            window.__evoSetDetail(html);
+        }
+    }
 
-            // 節點方框（系列座標 + 系列平移量）
-            var node = null;
-            try {
-                var idx = params && params.dataIndex;
-                if (idx != null && params.dataType === 'node') {
-                    var L = chart.getModel().getSeriesByIndex(0).getData().getItemLayout(idx);
-                    var off = seriesOffset(chart);
-                    if (L) {
-                        node = {
-                            left: box.left + off.x + L.x,
-                            top: box.top + off.y + L.y,
-                            right: box.left + off.x + L.x + (L.dx || 20),
-                            bottom: box.top + off.y + L.y + (L.dy || 20),
-                        };
-                    }
-                }
-            } catch (e) { /* 忽略 */ }
-
-            if (!node) {
-                // 沒有節點方框（例如 hover 連線）：沿用游標右下方，靠近邊界就翻轉
-                var cx = box.left + pos[0] + gap;
-                var cy = box.top + pos[1] + gap;
-                if (cx + w > viewW) cx = Math.max(0, box.left + pos[0] - gap - w);
-                if (cy + h > viewH) cy = Math.max(0, box.top + pos[1] - gap - h);
-                return [cx + scrollX, cy + scrollY];
-            }
-
-            var nodeW = node.right - node.left;
-            var nodeH = node.bottom - node.top;
-            // 四個候選位置（左上角座標）
-            var candidates = [
-                { x: node.right + gap, y: node.top + nodeH / 2 - h / 2 },              // 右
-                { x: node.left - gap - w, y: node.top + nodeH / 2 - h / 2 },            // 左
-                { x: node.left + nodeW / 2 - w / 2, y: node.bottom + gap },             // 下
-                { x: node.left + nodeW / 2 - w / 2, y: node.top - gap - h },            // 上
-            ];
-
-            function overlapArea(a, b) {
-                var ox = Math.max(0, Math.min(a.x + w, b.right) - Math.max(a.x, b.left));
-                var oy = Math.max(0, Math.min(a.y + h, b.bottom) - Math.max(a.y, b.top));
-                return ox * oy;
-            }
-
-            var best = null;
-            for (var i = 0; i < candidates.length; i++) {
-                var c = candidates[i];
-                // 夾進視窗（會被裁掉的部分不算顯示面積）
-                var left = Math.max(0, Math.min(c.x, viewW - Math.min(w, viewW)));
-                var top = Math.max(0, Math.min(c.y, viewH - Math.min(h, viewH)));
-                var visible = Math.max(0, Math.min(left + w, viewW) - Math.max(left, 0))
-                    * Math.max(0, Math.min(top + h, viewH) - Math.max(top, 0));
-                // 覆蓋到節點＝扣分（正常情況下應為 0）
-                var penalty = overlapArea({ x: left, y: top }, node) * 1000;
-                var score = visible - penalty;
-                if (!best || score > best.score) {
-                    best = { x: left, y: top, score: score };
-                }
-            }
-            return [best.x + scrollX, best.y + scrollY];
-        };
+    // 詳情內容＝原本的完整字表 + 「相連的線」清單；太長時先折疊，按「展開全部」再看
+    function buildDetailHtml(chart, params, d) {
+        var main = d.desc || '';
+        var data = chart.getOption().series[0].data;
+        var links = chart.getOption().series[0].links;
+        var isNode = params.dataType === 'node';
+        var rows = [];
+        if (isNode) {
+            links.forEach(function (l) {
+                if (l.source !== params.dataIndex && l.target !== params.dataIndex) return;
+                var other = l.source === params.dataIndex ? data[l.target] : data[l.source];
+                if (!other) return;
+                var dir = l.source === params.dataIndex ? '→' : '←';
+                rows.push(dir + ' ' + (other.name || '') + '（' + (l.value || 0) + '字）');
+            });
+        }
+        var list = '';
+        if (rows.length) {
+            list = '<div class="evo-detail-links"><b>相連 ' + rows.length + ' 條：</b><br>' +
+                rows.slice(0, 80).join('<br>') +
+                (rows.length > 80 ? '<br>…（其餘 ' + (rows.length - 80) + ' 條省略）' : '') +
+                '</div>';
+        }
+        var body = main + list;
+        if (body.length > 3000) {
+            return '<div class="evo-detail-truncated">' + body.slice(0, 3000) +
+                '…</div><button type="button" class="evo-detail-more" ' +
+                'onclick="this.previousElementSibling.classList.remove(\'evo-detail-truncated\');' +
+                'this.previousElementSibling.innerHTML=this.dataset.full.replace(/&lt;/g,\'&lt;\');' +
+                'this.remove();" data-full="' + body.replace(/"/g, '&quot;') + '">展開全部</button>';
+        }
+        return body;
     }
 
 })(window);
