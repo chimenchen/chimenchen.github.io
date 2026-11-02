@@ -712,15 +712,15 @@ function __wbg_get_imports() {
         getDataViewMemory0().setInt32(arg0 + 4 * 1, len1, true);
         getDataViewMemory0().setInt32(arg0 + 4 * 0, ptr1, true);
     }, arguments) };
+    imports.wbg.__wbg_createOrUpdateChart_fda1c95e2b5f3e8a = function(arg0, arg1, arg2, arg3) {
+        const ret = xilianChart.createOrUpdateChart(getObject(arg0), getStringFromWasm0(arg1, arg2), arg3 !== 0);
+        return addHeapObject(ret);
+    };
     imports.wbg.__wbg_time_a9055abac429ae39 = function(arg0, arg1) {
         console.time(getStringFromWasm0(arg0, arg1));
     };
     imports.wbg.__wbg_timeEnd_6312aef95ba5ec58 = function(arg0, arg1) {
         console.timeEnd(getStringFromWasm0(arg0, arg1));
-    };
-    imports.wbg.__wbg_createOrUpdateChart_fda1c95e2b5f3e8a = function(arg0, arg1, arg2, arg3) {
-        const ret = xilianChart.createOrUpdateChart(getObject(arg0), getStringFromWasm0(arg1, arg2), arg3 !== 0);
-        return addHeapObject(ret);
     };
     imports.wbg.__wbg_setcapture_4818ebe9ef88b2f6 = function(arg0, arg1) {
         getObject(arg0).capture = arg1 !== 0;
@@ -875,18 +875,18 @@ function __wbg_get_imports() {
         return addHeapObject(ret);
     }, arguments) };
     imports.wbg.__wbindgen_closure_wrapper392 = function(arg0, arg1, arg2) {
-        const ret = makeMutClosure(arg0, arg1, 25, __wbg_adapter_18);
+        const ret = makeMutClosure(arg0, arg1, 26, __wbg_adapter_18);
         return addHeapObject(ret);
     };
     imports.wbg.__wbindgen_closure_wrapper399 = function(arg0, arg1, arg2) {
-        const ret = makeMutClosure(arg0, arg1, 25, __wbg_adapter_18);
+        const ret = makeMutClosure(arg0, arg1, 26, __wbg_adapter_18);
         return addHeapObject(ret);
     };
     imports.wbg.__wbindgen_closure_wrapper1211 = function(arg0, arg1, arg2) {
         const ret = makeMutClosure(arg0, arg1, 56, __wbg_adapter_18);
         return addHeapObject(ret);
     };
-    imports.wbg.__wbindgen_closure_wrapper2834 = function(arg0, arg1, arg2) {
+    imports.wbg.__wbindgen_closure_wrapper2850 = function(arg0, arg1, arg2) {
         const ret = makeClosure(arg0, arg1, 68, __wbg_adapter_25);
         return addHeapObject(ret);
     };
