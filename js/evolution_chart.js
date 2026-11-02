@@ -26,6 +26,22 @@
         return loadingPromise;
     }
 
+    // sankey 的 itemLayout 是「系列座標」，畫到畫布上時整個系列還會被 left/top 平移
+    // （例如 left:5%、top:50px → 平移 (64.5, 50)）。滑鼠座標是畫布像素，
+    // 兩者必須換算，否則命中測試會整體偏移，看起來就是「拖不動」。
+    function seriesOffset(chart) {
+        try {
+            var d = chart.getModel().getSeriesByIndex(0).getData();
+            for (var i = 0; i < d.count(); i++) {
+                var el = d.getItemGraphicEl(i);
+                if (el && el.transform) {
+                    return { x: el.transform[4] || 0, y: el.transform[5] || 0 };
+                }
+            }
+        } catch (e) { /* 忽略 */ }
+        return { x: 0, y: 0 };
+    }
+
     window.evolutionChart = {
         // 初始化圖表：等 echarts 就緒 → 清除舊實例 → 返回新實例
         initAsync: async function (dom) {
@@ -40,8 +56,8 @@
         // 設置圖表配置
         setOptionAsync: async function (chart, option) {
             await ensureEcharts();
-            // 自己實作拖動（只允許上下、鬆手後重排），所以關掉 ECharts 的自由拖拽
-            if (option.series && option.series[0]) option.series[0].draggable = false;
+            // 保留 ECharts 的拖拽（實測最可靠），鬆手後由我們的 handler 依 y 重排並歸位到原欄
+            if (option.series && option.series[0]) option.series[0].draggable = true;
             option.tooltip = option.tooltip || {};
             option.tooltip.position = makeTooltipPosition(chart);
             chart.setOption(option);
@@ -50,8 +66,8 @@
         },
     };
 
-    // tooltip 位置：以「被 hover 的節點方框」為準，放在節點右側（右邊不夠就放左側），
-    // 垂直方向對齊節點中心並夾在可視範圍內——這樣永遠不會蓋住節點，也比較不會擋到別的節點。
+    // tooltip 位置：以「被 hover 的節點方框」為準，在 右／左／下／上 四個方向中選一個
+    // 「不覆蓋節點、且顯示得最完整（落在視窗內的面積最大）」的位置。
     // appendToBody 為 true，所以要回傳「頁面座標」。
     function makeTooltipPosition(chart) {
         return function (pos, params, dom, rect, size) {
@@ -60,36 +76,69 @@
             var scrollY = window.pageYOffset || 0;
             var w = size.contentSize[0];
             var h = size.contentSize[1];
-            var gap = 14;
+            var gap = 12;
+            var viewW = window.innerWidth;
+            var viewH = window.innerHeight;
 
-            // 節點方框（sankey 的 itemLayout 就是畫布內的像素座標）
-            var nodeBox = null;
+            // 節點方框（系列座標 + 系列平移量）
+            var node = null;
             try {
                 var idx = params && params.dataIndex;
                 if (idx != null && params.dataType === 'node') {
                     var L = chart.getModel().getSeriesByIndex(0).getData().getItemLayout(idx);
-                    if (L) nodeBox = { x: box.left + L.x, y: box.top + L.y, w: L.dx || 20, h: L.dy || 20 };
+                    var off = seriesOffset(chart);
+                    if (L) {
+                        node = {
+                            left: box.left + off.x + L.x,
+                            top: box.top + off.y + L.y,
+                            right: box.left + off.x + L.x + (L.dx || 20),
+                            bottom: box.top + off.y + L.y + (L.dy || 20),
+                        };
+                    }
                 }
             } catch (e) { /* 忽略 */ }
 
-            var x, y;
-            if (nodeBox) {
-                // 先試右側，不行再試左側
-                x = nodeBox.x + nodeBox.w + gap;
-                if (x + w > window.innerWidth) {
-                    x = nodeBox.x - gap - w;
-                }
-                y = nodeBox.y + nodeBox.h / 2 - h / 2;
-            } else {
-                x = box.left + pos[0] + gap;
-                y = box.top + pos[1] + gap;
-                if (x + w > window.innerWidth) x = box.left + pos[0] - gap - w;
-                if (y + h > window.innerHeight) y = box.top + pos[1] - gap - h;
+            if (!node) {
+                // 沒有節點方框（例如 hover 連線）：沿用游標右下方，靠近邊界就翻轉
+                var cx = box.left + pos[0] + gap;
+                var cy = box.top + pos[1] + gap;
+                if (cx + w > viewW) cx = Math.max(0, box.left + pos[0] - gap - w);
+                if (cy + h > viewH) cy = Math.max(0, box.top + pos[1] - gap - h);
+                return [cx + scrollX, cy + scrollY];
             }
-            // 夾在視窗內
-            x = Math.max(0, Math.min(x, window.innerWidth - w - 4));
-            y = Math.max(0, Math.min(y, window.innerHeight - h - 4));
-            return [x + scrollX, y + scrollY];
+
+            var nodeW = node.right - node.left;
+            var nodeH = node.bottom - node.top;
+            // 四個候選位置（左上角座標）
+            var candidates = [
+                { x: node.right + gap, y: node.top + nodeH / 2 - h / 2 },              // 右
+                { x: node.left - gap - w, y: node.top + nodeH / 2 - h / 2 },            // 左
+                { x: node.left + nodeW / 2 - w / 2, y: node.bottom + gap },             // 下
+                { x: node.left + nodeW / 2 - w / 2, y: node.top - gap - h },            // 上
+            ];
+
+            function overlapArea(a, b) {
+                var ox = Math.max(0, Math.min(a.x + w, b.right) - Math.max(a.x, b.left));
+                var oy = Math.max(0, Math.min(a.y + h, b.bottom) - Math.max(a.y, b.top));
+                return ox * oy;
+            }
+
+            var best = null;
+            for (var i = 0; i < candidates.length; i++) {
+                var c = candidates[i];
+                // 夾進視窗（會被裁掉的部分不算顯示面積）
+                var left = Math.max(0, Math.min(c.x, viewW - Math.min(w, viewW)));
+                var top = Math.max(0, Math.min(c.y, viewH - Math.min(h, viewH)));
+                var visible = Math.max(0, Math.min(left + w, viewW) - Math.max(left, 0))
+                    * Math.max(0, Math.min(top + h, viewH) - Math.max(top, 0));
+                // 覆蓋到節點＝扣分（正常情況下應為 0）
+                var penalty = overlapArea({ x: left, y: top }, node) * 1000;
+                var score = visible - penalty;
+                if (!best || score > best.score) {
+                    best = { x: left, y: top, score: score };
+                }
+            }
+            return [best.x + scrollX, best.y + scrollY];
         };
     }
 
@@ -107,8 +156,9 @@
         // 命中測試：節點方框 + 右側標籤區（+70px），允許 ±4px 誤差
         function hitTest(clientX, clientY) {
             var box = canvasRect();
-            var px = clientX - box.left;
-            var py = clientY - box.top;
+            var off = seriesOffset(chart);
+            var px = clientX - box.left - off.x;
+            var py = clientY - box.top - off.y;
             if (px < 0 || py < 0 || px > box.width || py > box.height) return null;
             var data = chart.getModel().getSeriesByIndex(0).getData();
             var best = null;
@@ -148,8 +198,9 @@
             document.body.classList.remove('evo-dragging');
             if (!d.moved) return;
             var box = canvasRect();
+            var off = seriesOffset(chart);
             try {
-                reorderByY(chart, d.index, d.x, e.clientY - box.top);
+                reorderByY(chart, d.index, d.x, e.clientY - box.top - off.y);
             } catch (err) {
                 /* 忽略：拖動失敗不影響原圖 */
             }
