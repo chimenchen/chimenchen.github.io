@@ -67,6 +67,10 @@
                 document.body.appendChild(host);
                 try {
                     var tmp = window.echarts.init(host, null, { renderer: 'svg', width: w, height: h });
+                    if (window.__evoCaption) {
+                        opt.title = [{ text: window.__evoCaption, left: 12, top: 6,
+                            textStyle: { fontSize: 15, fontWeight: 'normal' } }];
+                    }
                     tmp.setOption(opt, true);
                     var svgEl = host.querySelector('svg');
                     var text = svgEl ? svgEl.outerHTML : '';
@@ -80,13 +84,28 @@
                 return true;
             }
 
+            // PNG：取圖後在頂部補一條「朝代 + 篩選條件」說明（避免匯出的圖沒有上下文）
             var url = chart.getDataURL({ type: 'png', pixelRatio: ratio, backgroundColor: bg });
-            var a = document.createElement('a');
-            a.href = url;
-            a.download = 'evolution.png';
-            document.body.appendChild(a);
-            a.click();
-            a.remove();
+            var caption = window.__evoCaption || '';
+            var img = new Image();
+            img.onload = function () {
+                var pad = caption ? Math.round(46 * ratio) : 0;
+                var cv = document.createElement('canvas');
+                cv.width = img.width;
+                cv.height = img.height + pad;
+                var ctx = cv.getContext('2d');
+                ctx.fillStyle = bg;
+                ctx.fillRect(0, 0, cv.width, cv.height);
+                ctx.drawImage(img, 0, pad);
+                if (caption) {
+                    ctx.fillStyle = (window.getComputedStyle(document.body).color || '#222');
+                    ctx.font = Math.round(17 * ratio) + 'px sans-serif';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(caption, Math.round(14 * ratio), Math.round(pad / 2));
+                }
+                cv.toBlob(function (b) { download(b, 'evolution.png'); }, 'image/png');
+            };
+            img.src = url;
             return true;
         },
 
@@ -103,7 +122,8 @@
         },
 
         // 設置圖表配置
-        setOptionAsync: async function (chart, option) {
+        setOptionAsync: async function (chart, option, caption) {
+            window.__evoCaption = caption || '';
             await ensureEcharts();
             // 拖拽交回 ECharts 預設行為（自己實作容易出錯，已放棄）
             option.tooltip = option.tooltip || {};
