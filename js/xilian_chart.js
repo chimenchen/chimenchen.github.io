@@ -396,9 +396,11 @@ xilianChart.createOrUpdateChart = async function(chartDom, optionsStr, createNew
         chartDom.chartInstance.setOption(chartOption);
         console.log('Chart option set successfully');
 
-        // 力導向佈局：等它算穩就凍結位置（拖動節點才會只動那個節點）
-        if (chartOption && chartOption.series && chartOption.series[0]
-            && chartOption.series[0].layout === 'force') {
+        // 力導向佈局：只有「不跑動畫」的模式（反切系聯，節點多）才在算穩後凍結位置；
+        // 其他模式保留會動畫的力導向，拖動節點時可以即時重新佈局。
+        var graphSeries = chartOption && chartOption.series && chartOption.series[0];
+        if (graphSeries && graphSeries.layout === 'force'
+            && graphSeries.force && graphSeries.force.layoutAnimation === false) {
             freezeForceLayout(chartDom.chartInstance);
         }
         
