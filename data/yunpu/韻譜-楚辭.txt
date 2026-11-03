@@ -190,7 +190,7 @@
 支AI(歌AI部): [AI]奇AI螭AI離AI籬AI醨AI施AI馳AI移AI披AI為AI麾AI儀AI罷1AI宜AI
 支AI(歌AI部): [A/AI]虧AI
 紙AI(歌AI部): [AI]毀AI弛2AI [OI]蕊2AI
-歌AI(歌AI部): [AI]阿AI歌AI何AI河AI荷1AI苛AI他AI蛇2AI陀AI池2AIAI酡AI羅AI多AI
+歌AI(歌AI部): [AI]阿AI歌AI何AI河AI荷1AI苛AI他AI蛇2AI陀AI池2AI酡AI羅AI多AI
 哿AI(歌AI部): [AI]可AI我AI
 戈AI(歌AI部): [AI]波AI頗AI
 過AI(歌AI部): [AI]過2AI
@@ -383,7 +383,7 @@
 
 # 葉A部
 
-葉(葉部): [EP]涉A [AP]接A
+葉(葉A部): [EP]涉A [AP]接A
 狎(葉A部): [AP]甲A
 
 
