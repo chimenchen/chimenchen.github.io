@@ -310,6 +310,12 @@
                                         absoluteZoom
                                     ),
                                 },
+                                itemStyle: {
+                                    borderWidth: this.updateBorderWidth(
+                                        this.originalSeriesBorderWidth || 1,
+                                        absoluteZoom
+                                    ),
+                                },
                             },
                         ],
                     },
@@ -373,13 +379,18 @@
         }
 
         // 更新邊框寬度
+        //
+        // ECharts 的 roam 縮放本身就會把線寬一起放大，所以這裡要「反向」補償，
+        // 讓邊框在螢幕上大致維持原本的粗細（base / zoom）。
+        // 之前用 base * zoom^0.7，放大時邊框會粗到 3px 以上；而且只有自帶 itemStyle 的
+        // 節點會更新、其餘走 series 級設定，兩批節點粗細不一致，縮小後又細到看不見。
         updateBorderWidth(originalWidth, zoom) {
-            const MIN_BORDER_WIDTH = 0.2;
-            const MAX_BORDER_WIDTH = 3;
-            const borderWidthFactor = zoom === 1 ? 1 : Math.pow(zoom, 0.7);
+            const MIN_BORDER_WIDTH = 0.05;
+            const MAX_BORDER_WIDTH = 4;
+            const z = Math.max(0.01, zoom);
             const result = Math.max(MIN_BORDER_WIDTH,
-                Math.min(originalWidth * borderWidthFactor, MAX_BORDER_WIDTH));
-            return result;
+                Math.min(originalWidth / z, MAX_BORDER_WIDTH));
+            return Math.round(result * 100) / 100;
         }
 
         // 設置工具箱功能
