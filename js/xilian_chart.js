@@ -7,6 +7,66 @@ xilianChart.chartInstance = null;
 // echarts 約 1MB，首屏不阻塞加載：第一次繪圖時才動態插入 <script>
 var echartsLoadingPromise = null;
 
+
+// 力導向佈局算穩之後把位置「凍結」：改成 layout:'none'，把算好的 x/y 寫回節點。
+// 否則拖動節點時 ECharts 會重跑力導向，看起來像整張圖在旋轉、被拖的節點反而沒動。
+function freezeForceLayout(chart) {
+    var prev = null;
+    var tries = 0;
+    var timer = setInterval(function() {
+        tries++;
+        var pts = null;
+        try {
+            var seriesModel = chart.getModel().getSeriesByIndex(0);
+            if (!seriesModel || seriesModel.subType !== 'graph') { clearInterval(timer); return; }
+            var data = seriesModel.getData();
+            pts = [];
+            for (var i = 0; i < data.count(); i++) {
+                var L = data.getItemLayout(i);
+                pts.push((L && isFinite(L[0]) && isFinite(L[1])) ? [L[0], L[1]] : null);
+            }
+        } catch (e) {
+            clearInterval(timer);
+            return;
+        }
+        var maxDelta = Infinity;
+        if (prev && prev.length === pts.length) {
+            maxDelta = 0;
+            for (var i = 0; i < pts.length; i++) {
+                if (!pts[i] || !prev[i]) { continue; }
+                var dx = pts[i][0] - prev[i][0];
+                var dy = pts[i][1] - prev[i][1];
+                var d = Math.sqrt(dx * dx + dy * dy);
+                if (d > maxDelta) { maxDelta = d; }
+            }
+        }
+        prev = pts;
+        if (maxDelta < 1.0 || tries > 25) {
+            clearInterval(timer);
+            applyFrozenLayout(chart, pts);
+        }
+    }, 200);
+}
+
+function applyFrozenLayout(chart, pts) {
+    try {
+        var opt = chart.getOption();
+        var series = opt && opt.series && opt.series[0];
+        if (!series || series.layout !== 'force') { return; }
+        var nodes = series.data || [];
+        for (var i = 0; i < nodes.length && i < pts.length; i++) {
+            if (!pts[i]) { continue; }
+            nodes[i] = Object.assign({}, nodes[i], { x: pts[i][0], y: pts[i][1] });
+        }
+        series.data = nodes;
+        series.layout = 'none';
+        delete series.force;
+        chart.setOption(opt);
+    } catch (e) {
+        console.warn('凍結佈局失敗', e);
+    }
+}
+
 function ensureEchartsLoaded() {
     if (window.echarts) {
         return Promise.resolve(window.echarts);
@@ -335,6 +395,12 @@ xilianChart.createOrUpdateChart = async function(chartDom, optionsStr, createNew
         console.log('Setting chart option...');
         chartDom.chartInstance.setOption(chartOption);
         console.log('Chart option set successfully');
+
+        // 力導向佈局：等它算穩就凍結位置（拖動節點才會只動那個節點）
+        if (chartOption && chartOption.series && chartOption.series[0]
+            && chartOption.series[0].layout === 'force') {
+            freezeForceLayout(chartDom.chartInstance);
+        }
         
         // 检查图表实例状态
         console.log('Chart instance exists:', !!chartDom.chartInstance);
