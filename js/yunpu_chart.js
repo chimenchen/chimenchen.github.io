@@ -398,19 +398,21 @@
 
         // 邊框寬度（回傳圖座標值；ECharts 會再乘 zoom）。
         //
-        // 原則：**同一種元素同一種線寬**。圖上大小是靠半徑表達的，邊框粗細不一致會顯得雜亂。
-        // 所以絕大多數節點固定 1px；只有「1px 會佔掉直徑 28% 以上」的小節點才縮細
-        // （下限 0.32px，再細在螢幕上看不見）。
-        // zoom=1、直徑 10px 時仍是 1px，與舊設定手感一致。
+        // 兩個要求要同時成立：
+        //   1. 同一張圖上「同類元素同線寬」→ 邊框不可跟著節點大小跑，
+        //      否則大小節點粗細不同，看起來雜亂。
+        //   2. 邊框要隨縮放溫和變化 → 不能完全固定成 1px（放大後會細得突兀）。
+        // 做法：以 zoom^0.5 決定螢幕粗細（夾 0.30–1.40px），
+        //      再用「不超過節點直徑 35%」保住填充色（只有極小的節點會因此更細）。
         nodeBorderWidth(scaledSymbolSize, zoom, ratio) {
             const z = Math.max(0.01, Number(zoom) || 1);
             const base = (typeof ratio === 'number' && isFinite(ratio) && ratio > 0) ? ratio : 1;
             const size = (typeof scaledSymbolSize === 'number' && isFinite(scaledSymbolSize))
                 ? scaledSymbolSize : 30;
             const screenDiameter = Math.max(0.5, size * z);
-            const screen = Math.min(1.0 * base,
-                Math.max(0.32 * base, screenDiameter * 0.28 * base));
-            return Math.round((screen / z) * 1000) / 1000;
+            const byZoom = Math.min(1.4, Math.max(0.30, Math.pow(z, 0.5))) * base;
+            const capByFill = Math.max(0.30 * base, screenDiameter * 0.35 * base);
+            return Math.round((Math.min(byZoom, capByFill) / z) * 1000) / 1000;
         }
 
         // series 級（沒有自帶 itemStyle 的節點）用的預設值：以預設 symbolSize 30 估算
