@@ -39,10 +39,13 @@
             this.minZoom = 0.3;
             this.maxZoom = 3;
             this.originalSeriesLabelFontSize = 12;
-            this.originalNodeLabelFontSizes = [];
-            this.originalSymbolSizes = [];
+            // 節點原始值一律以「節點名」為鍵（不用陣列索引：換資料或非同步更新時索引會錯位）
+            this.originalNodeLabelFontSizes = new Map();
+            this.originalSymbolSizes = new Map();
             this.originalSeriesBorderWidth = null;
-            this.originalBorderWidths = [];
+            this.originalBorderWidths = new Map();
+            // 每套用一次完整 option 就 +1；縮放的 rAF 回呼靠它判斷是不是過期工作
+            this.optionEpoch = 0;
 
             this.tooltipShown = false;
             
@@ -160,6 +163,7 @@
 
             // 在設置選項之前應用縮放
             this.applyZoomToOption(option, this.currentZoom);
+            this.optionEpoch += 1;
             this.chart.setOption(option, createNewInstance);
         }
 
@@ -182,15 +186,19 @@
             }
         }
 
-        // 保存節點大小信息（每次都重新建立，否則重複 setOption 會讓索引錯位 → 縮放時大小亂跳）
+        // 保存節點大小信息（以節點名為鍵，每次都重新建立）
         saveNodeSizes(data) {
-            this.originalSymbolSizes = [];
-            this.originalNodeLabelFontSizes = [];
-            this.originalBorderWidths = [];
-            data.forEach(node => {
-                this.originalSymbolSizes.push(node.symbolSize || null);
-                this.originalNodeLabelFontSizes.push(node.label && node.label.fontSize || null);
-                this.originalBorderWidths.push(node.itemStyle && node.itemStyle.borderWidth || null);
+            this.originalSymbolSizes = new Map();
+            this.originalNodeLabelFontSizes = new Map();
+            this.originalBorderWidths = new Map();
+            (data || []).forEach(node => {
+                const key = node.name;
+                if (key === undefined || key === null) {
+                    return;
+                }
+                this.originalSymbolSizes.set(key, node.symbolSize || null);
+                this.originalNodeLabelFontSizes.set(key, (node.label && node.label.fontSize) || null);
+                this.originalBorderWidths.set(key, (node.itemStyle && node.itemStyle.borderWidth) || null);
             });
         }
 
@@ -232,10 +240,14 @@
                 return;
             }
             this.graphRoamScheduled = true;
+            const epoch = this.optionEpoch;
             const run = () => {
                 this.graphRoamScheduled = false;
                 if (this.applyingZoom) {
                     return; // 這次是我們自己 setOption 觸發的，不要再處理，避免回授
+                }
+                if (epoch !== this.optionEpoch) {
+                    return; // 期間已換過整份 option，這個回呼是過期工作，丟掉
                 }
                 this.handleGraphRoam();
             };
@@ -334,21 +346,25 @@
             zoom = Math.max(MIN_SCALE, zoom);
             const nodeSizeFactor = zoom === 1 ? 1 : Math.pow(zoom, 0.7);
 
-            return data.map((node, index) => {
+            return (data || []).map(node => {
                 const newNode = { ...node };
-                if (this.originalSymbolSizes[index] !== null) {
-                    newNode.symbolSize = Math.max(MIN_NODE_SIZE, this.originalSymbolSizes[index] * nodeSizeFactor);
+                const key = node.name;
+                const origSize = this.originalSymbolSizes.get(key);
+                const origFont = this.originalNodeLabelFontSizes.get(key);
+                const origBorder = this.originalBorderWidths.get(key);
+                if (typeof origSize === 'number') {
+                    newNode.symbolSize = Math.max(MIN_NODE_SIZE, origSize * nodeSizeFactor);
                 }
-                if (this.originalNodeLabelFontSizes[index] !== null) {
+                if (typeof origFont === 'number') {
                     newNode.label = {
                         ...node.label,
-                        fontSize: this.updateFontSize(this.originalNodeLabelFontSizes[index], zoom),
+                        fontSize: this.updateFontSize(origFont, zoom),
                     };
                 }
-                if (this.originalBorderWidths[index] !== null) {
+                if (typeof origBorder === 'number') {
                     newNode.itemStyle = {
                         ...node.itemStyle,
-                        borderWidth: this.updateBorderWidth(this.originalBorderWidths[index], zoom),
+                        borderWidth: this.updateBorderWidth(origBorder, zoom),
                     };
                 }
                 return newNode;
@@ -385,12 +401,16 @@
         // 之前用 base * zoom^0.7，放大時邊框會粗到 3px 以上；而且只有自帶 itemStyle 的
         // 節點會更新、其餘走 series 級設定，兩批節點粗細不一致，縮小後又細到看不見。
         updateBorderWidth(originalWidth, zoom) {
-            const MIN_BORDER_WIDTH = 0.05;
-            const MAX_BORDER_WIDTH = 4;
-            const z = Math.max(0.01, zoom);
+            const MIN_BORDER_WIDTH = 0.12;
+            const MAX_BORDER_WIDTH = 3.5;
+            const base = (typeof originalWidth === 'number' && isFinite(originalWidth) && originalWidth > 0)
+                ? originalWidth : 1;
+            const z = Math.max(0.01, Number(zoom) || 1);
+            // 螢幕上的粗細 ≈ base × zoom^0.2：縮小（初始）時略細、放大時略粗，
+            // 兩端都不會誇張；用 0.8 而不是 1.0，避免「一開始就覺得邊框偏粗」。
             const result = Math.max(MIN_BORDER_WIDTH,
-                Math.min(originalWidth / z, MAX_BORDER_WIDTH));
-            return Math.round(result * 100) / 100;
+                Math.min(base / Math.pow(z, 0.8), MAX_BORDER_WIDTH));
+            return Math.round(result * 1000) / 1000;
         }
 
         // 設置工具箱功能
