@@ -361,12 +361,14 @@
                         fontSize: this.updateFontSize(origFont, zoom),
                     };
                 }
-                if (typeof origBorder === 'number') {
-                    newNode.itemStyle = {
-                        ...node.itemStyle,
-                        borderWidth: this.updateBorderWidth(origBorder, zoom),
-                    };
-                }
+                // 每個節點都給明確的邊框寬度（否則會走 series 級設定，大小不一的節點無法各自調整）
+                const ratio = (typeof origBorder === 'number' && origBorder > 0)
+                    ? origBorder
+                    : (this.originalSeriesBorderWidth || 1);
+                newNode.itemStyle = {
+                    ...node.itemStyle,
+                    borderWidth: this.nodeBorderWidth(newNode.symbolSize || origSize || 30, zoom, ratio),
+                };
                 return newNode;
             });
         }
@@ -394,23 +396,28 @@
                 Math.min(fontSize * fontScaleFactor, MAX_FONT_SCALE * fontSize));
         }
 
-        // 更新邊框寬度
+        // 依「節點在螢幕上的直徑」決定邊框寬度（回傳的是圖座標值，要再除以 zoom）。
         //
-        // ECharts 的 roam 縮放本身就會把線寬一起放大，所以這裡要「反向」補償，
-        // 讓邊框在螢幕上大致維持原本的粗細（base / zoom）。
-        // 之前用 base * zoom^0.7，放大時邊框會粗到 3px 以上；而且只有自帶 itemStyle 的
-        // 節點會更新、其餘走 series 級設定，兩批節點粗細不一致，縮小後又細到看不見。
-        updateBorderWidth(originalWidth, zoom) {
-            const MIN_BORDER_WIDTH = 0.12;
-            const MAX_BORDER_WIDTH = 3.5;
-            const base = (typeof originalWidth === 'number' && isFinite(originalWidth) && originalWidth > 0)
-                ? originalWidth : 1;
+        // 縮小後節點只剩幾 px，若還畫 1px 的深色邊框，整個小圓點看起來就是黑的
+        // ——所以螢幕直徑 < 6px 時乾脆不畫邊框，其餘按直徑的 5% 取（夾在 0.5–2px）。
+        nodeBorderWidth(scaledSymbolSize, zoom, ratio) {
             const z = Math.max(0.01, Number(zoom) || 1);
-            // 螢幕上的粗細 ≈ base × zoom^0.2：縮小（初始）時略細、放大時略粗，
-            // 兩端都不會誇張；用 0.8 而不是 1.0，避免「一開始就覺得邊框偏粗」。
-            const result = Math.max(MIN_BORDER_WIDTH,
-                Math.min(base / Math.pow(z, 0.8), MAX_BORDER_WIDTH));
-            return Math.round(result * 1000) / 1000;
+            const size = (typeof scaledSymbolSize === 'number' && isFinite(scaledSymbolSize))
+                ? scaledSymbolSize : 30;
+            const screenDiameter = size * z;
+            if (!(screenDiameter >= 6)) {
+                return 0;
+            }
+            const r = (typeof ratio === 'number' && ratio > 0) ? ratio : 1;
+            const target = Math.max(0.5, Math.min(2.0, screenDiameter * 0.05)) * r;
+            return Math.round((target / z) * 1000) / 1000;
+        }
+
+        // series 級（沒有自帶 itemStyle 的節點）用的預設值：以預設 symbolSize 30 估算
+        updateBorderWidth(originalWidth, zoom) {
+            const z = Math.max(0.01, Number(zoom) || 1);
+            const ratio = (typeof originalWidth === 'number' && originalWidth > 0) ? originalWidth : 1;
+            return this.nodeBorderWidth(30 * Math.pow(z, 0.7), z, ratio);
         }
 
         // 設置工具箱功能
