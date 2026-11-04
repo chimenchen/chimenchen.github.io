@@ -398,18 +398,18 @@
 
         // 邊框寬度（回傳圖座標值；ECharts 會再乘 zoom）。
         //
-        // 舊公式 base / zoom^0.8 的螢幕粗細幾乎不隨縮放變（∝ zoom^0.2），但節點直徑
-        // ∝ zoom^1.7，兩者脫鉤 → zoom≈0.5 時邊框佔直徑 27%，看起來偏粗。
-        // 改成「可讀範圍內固定佔直徑 10%」：太小的節點退化成 0.32px 細線（再細就看不見），
-        // 太大的節點上限 1.6px。zoom=1、直徑 10px 時仍是 1px，與舊設定手感一致。
+        // 原則：**同一種元素同一種線寬**。圖上大小是靠半徑表達的，邊框粗細不一致會顯得雜亂。
+        // 所以絕大多數節點固定 1px；只有「1px 會佔掉直徑 28% 以上」的小節點才縮細
+        // （下限 0.32px，再細在螢幕上看不見）。
+        // zoom=1、直徑 10px 時仍是 1px，與舊設定手感一致。
         nodeBorderWidth(scaledSymbolSize, zoom, ratio) {
             const z = Math.max(0.01, Number(zoom) || 1);
             const base = (typeof ratio === 'number' && isFinite(ratio) && ratio > 0) ? ratio : 1;
             const size = (typeof scaledSymbolSize === 'number' && isFinite(scaledSymbolSize))
                 ? scaledSymbolSize : 30;
             const screenDiameter = Math.max(0.5, size * z);
-            const screen = Math.min(1.6 * base,
-                Math.max(0.32 * base, screenDiameter * 0.10 * base));
+            const screen = Math.min(1.0 * base,
+                Math.max(0.32 * base, screenDiameter * 0.28 * base));
             return Math.round((screen / z) * 1000) / 1000;
         }
 
