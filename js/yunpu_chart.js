@@ -396,21 +396,26 @@
                 Math.min(fontSize * fontScaleFactor, MAX_FONT_SCALE * fontSize));
         }
 
-        // 依「節點在螢幕上的直徑」決定邊框寬度（回傳的是圖座標值，要再除以 zoom）。
+        // 邊框寬度（回傳圖座標值；ECharts 會再乘 zoom）。
         //
-        // 縮小後節點只剩幾 px，若還畫 1px 的深色邊框，整個小圓點看起來就是黑的
-        // ——所以螢幕直徑 < 6px 時乾脆不畫邊框，其餘按直徑的 5% 取（夾在 0.5–2px）。
+        // 沿用先前長期穩定的設定：螢幕粗細 ≈ base / zoom^0.8，夾在 0.12–3.5，
+        // 也就是縮小（初始）時略細、放大時略粗，兩端都不誇張。
+        // a4451a4 曾改成「螢幕直徑 < 6px 就不畫邊框」，結果縮小後邊框整個消失；
+        // 這裡改回舊公式，只補一條保守上限：螢幕上的邊框不超過節點直徑的 35%，
+        // 免得小節點被深色邊框吃掉、填充色看不出來。
         nodeBorderWidth(scaledSymbolSize, zoom, ratio) {
             const z = Math.max(0.01, Number(zoom) || 1);
+            const base = (typeof ratio === 'number' && isFinite(ratio) && ratio > 0) ? ratio : 1;
+            const MIN_BORDER_WIDTH = 0.12;
+            const MAX_BORDER_WIDTH = 3.5;
+            let graphWidth = Math.max(MIN_BORDER_WIDTH,
+                Math.min(base / Math.pow(z, 0.8), MAX_BORDER_WIDTH));
             const size = (typeof scaledSymbolSize === 'number' && isFinite(scaledSymbolSize))
                 ? scaledSymbolSize : 30;
-            const screenDiameter = size * z;
-            if (!(screenDiameter >= 6)) {
-                return 0;
-            }
-            const r = (typeof ratio === 'number' && ratio > 0) ? ratio : 1;
-            const target = Math.max(0.5, Math.min(2.0, screenDiameter * 0.05)) * r;
-            return Math.round((target / z) * 1000) / 1000;
+            const screenDiameter = Math.max(0.5, size * z);
+            const maxGraph = Math.max(MIN_BORDER_WIDTH, (screenDiameter * 0.35) / z);
+            graphWidth = Math.min(graphWidth, maxGraph);
+            return Math.round(graphWidth * 1000) / 1000;
         }
 
         // series 級（沒有自帶 itemStyle 的節點）用的預設值：以預設 symbolSize 30 估算
