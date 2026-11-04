@@ -398,24 +398,19 @@
 
         // 邊框寬度（回傳圖座標值；ECharts 會再乘 zoom）。
         //
-        // 沿用先前長期穩定的設定：螢幕粗細 ≈ base / zoom^0.8，夾在 0.12–3.5，
-        // 也就是縮小（初始）時略細、放大時略粗，兩端都不誇張。
-        // a4451a4 曾改成「螢幕直徑 < 6px 就不畫邊框」，結果縮小後邊框整個消失；
-        // 這裡改回舊公式，只補一條保守上限：螢幕上的邊框不超過節點直徑的 35%，
-        // 免得小節點被深色邊框吃掉、填充色看不出來。
+        // 舊公式 base / zoom^0.8 的螢幕粗細幾乎不隨縮放變（∝ zoom^0.2），但節點直徑
+        // ∝ zoom^1.7，兩者脫鉤 → zoom≈0.5 時邊框佔直徑 27%，看起來偏粗。
+        // 改成「可讀範圍內固定佔直徑 10%」：太小的節點退化成 0.32px 細線（再細就看不見），
+        // 太大的節點上限 1.6px。zoom=1、直徑 10px 時仍是 1px，與舊設定手感一致。
         nodeBorderWidth(scaledSymbolSize, zoom, ratio) {
             const z = Math.max(0.01, Number(zoom) || 1);
             const base = (typeof ratio === 'number' && isFinite(ratio) && ratio > 0) ? ratio : 1;
-            const MIN_BORDER_WIDTH = 0.12;
-            const MAX_BORDER_WIDTH = 3.5;
-            let graphWidth = Math.max(MIN_BORDER_WIDTH,
-                Math.min(base / Math.pow(z, 0.8), MAX_BORDER_WIDTH));
             const size = (typeof scaledSymbolSize === 'number' && isFinite(scaledSymbolSize))
                 ? scaledSymbolSize : 30;
             const screenDiameter = Math.max(0.5, size * z);
-            const maxGraph = Math.max(MIN_BORDER_WIDTH, (screenDiameter * 0.35) / z);
-            graphWidth = Math.min(graphWidth, maxGraph);
-            return Math.round(graphWidth * 1000) / 1000;
+            const screen = Math.min(1.6 * base,
+                Math.max(0.32 * base, screenDiameter * 0.10 * base));
+            return Math.round((screen / z) * 1000) / 1000;
         }
 
         // series 級（沒有自帶 itemStyle 的節點）用的預設值：以預設 symbolSize 30 估算
