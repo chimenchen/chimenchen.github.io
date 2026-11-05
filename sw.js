@@ -1,4 +1,4 @@
-const CACHE_VERSION = '1.0.1047';
+const CACHE_VERSION = '1.0.1048';
 const CACHE_NAME = `koukoushengsheng-${CACHE_VERSION}`;
 
 // 首次安裝時只預緩存「小文件」（HTML/CSS/圖標）。
@@ -127,9 +127,14 @@ self.addEventListener('fetch', event => {
     }
 
     // 頁面導航：網絡優先，失敗時回退到緩存（保證離線/弱網也能打開）
+    //
+    // 注意要用 cache: 'reload' 強制繞過 HTTP 快取：
+    // GitHub Pages 對 HTML 也給 max-age=600，而瀏覽器「強制重整」的繞快取旗標
+    // 不會傳進 Service Worker 裡的 fetch()，所以這裡不指定就會拿到最多 10 分鐘前的舊頁面
+    // ——新版本因此遲遲不生效（?v= 還停在上一版）。
     if (request.mode === 'navigate') {
         event.respondWith(
-            fetch(request)
+            fetch(request, { cache: 'reload' })
                 .then(response => {
                     const clone = response.clone();
                     caches.open(CACHE_NAME).then(cache => {
