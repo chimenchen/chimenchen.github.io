@@ -5,9 +5,9 @@
       <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=yes">
       <title>口口聲聲</title>
       <link rel="stylesheet" href="/duyin.css">
-      <script src="/js/espeakng.js?v=1.0.1048"></script>
-      <script src="/js/zhongwen_speak.js?v=1.0.1048"></script>
-      <script src="/js/video_export.js?v=1.0.1048"></script>
+      <script src="/js/espeakng.js?v=1.0.1049"></script>
+      <script src="/js/zhongwen_speak.js?v=1.0.1049"></script>
+      <script src="/js/video_export.js?v=1.0.1049"></script>
       <script>
         // 老瀏覽器/異常卡死時，15 秒後追加可操作的提示
         document.addEventListener('DOMContentLoaded', function () {
@@ -31,10 +31,10 @@
         else if (document.body) { document.body.textContent = msg; }
         });
       </script>
-      <link rel="preload" href="/duyin-web_bg.wasm?v=1.0.1048" as="fetch" type="application/wasm" crossorigin="">
-      <link rel="modulepreload" href="/duyin-web.js?v=1.0.1048">
+      <link rel="preload" href="/duyin-web_bg.wasm?v=1.0.1049" as="fetch" type="application/wasm" crossorigin="">
+      <link rel="modulepreload" href="/duyin-web.js?v=1.0.1049">
       <script type="module">
-        import init from '/duyin-web.js?v=1.0.1048';
+        import init from '/duyin-web.js?v=1.0.1049';
         // 下載並啟動 wasm：顯示下載進度；失敗時給出明確提示。
         // 舊版瀏覽器可能不支持本程序所需的 WebAssembly 特性，否則會一直停留在「正在思考……」。
         async function startApp() {
@@ -48,7 +48,7 @@
         throw new Error('此瀏覽器不支持 WebAssembly');
         }
         setStatus('正在下載程序……');
-        const response = await fetch('/duyin-web_bg.wasm?v=1.0.1048', { credentials: 'omit' });
+        const response = await fetch('/duyin-web_bg.wasm?v=1.0.1049', { credentials: 'omit' });
         if (!response.ok) {
         throw new Error('下載失敗（HTTP ' + response.status + '）');
         }
@@ -123,6 +123,31 @@
         setStatus('加載失敗：' + (error && error.message ? error.message : error) + '。請刷新頁面重試，或更換瀏覽器。');
         }
         }
+        // ── 版本自癒 ────────────────────────────────────────────────────────
+        // Firefox 直接開 /duyin（書籤）時不經過首頁，因此不會註冊／更新 Service Worker，
+        // 舊快取可能永遠不換。這裡每次載入都比對「頁面資源版本」與「快取版本」，
+        // 不一致就清掉舊快取並重載一次（sessionStorage 標記避免迴圈）。
+        (async function selfHealAssets() {
+        if (!('serviceWorker' in navigator)) return;
+        const wants = Array.from(document.querySelectorAll('script[src*="?v="]'))
+        .map(function (s) { return (s.src.match(/[?&]v=([^&]+)/) || [])[1]; })
+        .filter(Boolean);
+        if (!wants.length) return;
+        const want = wants[0];
+        try {
+        const reg = await navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' });
+        reg.update().catch(function () {});
+        if (!window.caches || !caches.keys) return;
+        const keys = await caches.keys();
+        const stale = keys.filter(function (k) { return k.indexOf('-' + want) < 0; });
+        if (!stale.length) return;
+        const flag = '__swPurge_' + want;
+        if (sessionStorage.getItem(flag)) return;
+        sessionStorage.setItem(flag, '1');
+        await Promise.all(stale.map(function (k) { return caches.delete(k); }));
+        location.reload();
+        } catch (e) { /* 自癒失敗不影響使用 */ }
+        })();
         startApp();
       </script>
       <base target="_parent">
