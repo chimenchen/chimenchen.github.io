@@ -919,9 +919,6 @@ function __wbg_get_imports() {
         const ret = getObject(arg0).status;
         return ret;
     };
-    imports.wbg.__wbg_alert_c1d5ffe256491b29 = function() { return handleError(function (arg0, arg1, arg2) {
-        getObject(arg0).alert(getStringFromWasm0(arg1, arg2));
-    }, arguments) };
     imports.wbg.__wbg_newwithstr_31920be5b8b6d221 = function() { return handleError(function (arg0, arg1) {
         const ret = new Request(getStringFromWasm0(arg0, arg1));
         return addHeapObject(ret);
@@ -968,6 +965,9 @@ function __wbg_get_imports() {
     imports.wbg.__wbg_arrayBuffer_a5fbad63cc7e663b = function() { return handleError(function (arg0) {
         const ret = getObject(arg0).arrayBuffer();
         return addHeapObject(ret);
+    }, arguments) };
+    imports.wbg.__wbg_alert_c1d5ffe256491b29 = function() { return handleError(function (arg0, arg1, arg2) {
+        getObject(arg0).alert(getStringFromWasm0(arg1, arg2));
     }, arguments) };
     imports.wbg.__wbg_scrollWidth_a2bdee78f09b4be7 = function(arg0) {
         const ret = getObject(arg0).scrollWidth;
@@ -1414,15 +1414,15 @@ function __wbg_get_imports() {
         const ret = makeMutClosure(arg0, arg1, 128, __wbg_adapter_36);
         return addHeapObject(ret);
     };
-    imports.wbg.__wbindgen_closure_wrapper3640 = function(arg0, arg1, arg2) {
+    imports.wbg.__wbindgen_closure_wrapper3643 = function(arg0, arg1, arg2) {
         const ret = makeMutClosure(arg0, arg1, 132, __wbg_adapter_41);
         return addHeapObject(ret);
     };
-    imports.wbg.__wbindgen_closure_wrapper5201 = function(arg0, arg1, arg2) {
+    imports.wbg.__wbindgen_closure_wrapper5204 = function(arg0, arg1, arg2) {
         const ret = makeMutClosure(arg0, arg1, 132, __wbg_adapter_36);
         return addHeapObject(ret);
     };
-    imports.wbg.__wbindgen_closure_wrapper6177 = function(arg0, arg1, arg2) {
+    imports.wbg.__wbindgen_closure_wrapper6180 = function(arg0, arg1, arg2) {
         const ret = makeClosure(arg0, arg1, 169, __wbg_adapter_59);
         return addHeapObject(ret);
     };
