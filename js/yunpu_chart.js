@@ -3,6 +3,15 @@
 (function(window) {
     'use strict';
 
+    // ── 縮放時的邊框參數（集中放這裡，方便微調）────────────────────
+    // 邊框寬度以「螢幕像素」為目標，再換算回 canvas 座標（除以 zoom）。
+    const BORDER_ZOOM_EXP = 1.0;    // 隨縮放衰減的指數；1.0 = 與 zoom 成正比（0.5 是舊值，衰減太慢）
+    const BORDER_MIN_PX = 0.12;     // 螢幕上的最小邊框（<1px 由瀏覽器做覆蓋率抗鋸齒 → 看起來更淡）
+    const BORDER_MAX_RATIO = 0.22;  // 邊框不得超過節點直徑的這個比例
+    const BORDER_MAX_PX = 1.4;      // 放大時的上限
+    const BORDER_ALPHA_EXP = 0.6;   // 縮小時邊框變淡的速度
+    const BORDER_ALPHA_MIN = 0.30;  // 最淡不會低於這個不透明度
+
     // echarts 約 1MB，首屏不阻塞加載：第一次繪圖時才動態插入 <script>。
     let echartsLoadingPromise = null;
 
@@ -186,6 +195,7 @@
                 this.originalSeriesLabelFontSize = option.series[0].label && option.series[0].label.fontSize || 12;
                 this.saveNodeSizes(option.series[0].data);
                 this.originalSeriesBorderWidth = option.series[0].itemStyle.borderWidth || 1;
+                this.originalSeriesBorderColor = option.series[0].itemStyle.borderColor || null;
             }
         }
 
@@ -330,6 +340,10 @@
                                         this.originalSeriesBorderWidth || 1,
                                         absoluteZoom
                                     ),
+                                    borderColor: this.withAlpha(
+                                        this.originalSeriesBorderColor,
+                                        this.nodeBorderAlpha(absoluteZoom)
+                                    ),
                                 },
                             },
                         ],
@@ -348,6 +362,7 @@
             const MIN_BORDER_WIDTH = 0.2;
             zoom = Math.max(MIN_SCALE, zoom);
             const nodeSizeFactor = zoom === 1 ? 1 : Math.pow(zoom, 0.7);
+            const alpha = this.nodeBorderAlpha(zoom);
 
             return (data || []).map(node => {
                 const newNode = { ...node };
@@ -368,9 +383,13 @@
                 const ratio = (typeof origBorder === 'number' && origBorder > 0)
                     ? origBorder
                     : (this.originalSeriesBorderWidth || 1);
+                const borderColor = node.itemStyle && node.itemStyle.borderColor;
                 newNode.itemStyle = {
                     ...node.itemStyle,
                     borderWidth: this.nodeBorderWidth(newNode.symbolSize || origSize || 30, zoom, ratio),
+                    borderColor: borderColor
+                        ? this.withAlpha(borderColor, alpha)
+                        : borderColor,
                 };
                 return newNode;
             });
@@ -413,9 +432,49 @@
             const size = (typeof scaledSymbolSize === 'number' && isFinite(scaledSymbolSize))
                 ? scaledSymbolSize : 30;
             const screenDiameter = Math.max(0.5, size * z);
-            const byZoom = Math.min(1.4, Math.max(0.30, Math.pow(z, 0.5))) * base;
-            const capByFill = Math.max(0.30 * base, screenDiameter * 0.35 * base);
+            const byZoom = Math.min(BORDER_MAX_PX, Math.max(BORDER_MIN_PX, Math.pow(z, BORDER_ZOOM_EXP))) * base;
+            const capByFill = Math.max(BORDER_MIN_PX * base, screenDiameter * BORDER_MAX_RATIO * base);
             return Math.round((Math.min(byZoom, capByFill) / z) * 1000) / 1000;
+        }
+
+        // 邊框的不透明度：縮小時一起變淡，免得細線在深色節點上形成硬邊
+        nodeBorderAlpha(zoom) {
+            const z = Math.max(0.01, Number(zoom) || 1);
+            return Math.min(1, Math.max(BORDER_ALPHA_MIN, Math.pow(z, BORDER_ALPHA_EXP)));
+        }
+
+        // 把顏色轉成帶指定透明度的 rgba（認得 #rgb/#rrggbb/#rrggbbaa 與 rgb()/rgba()）
+        withAlpha(color, alpha) {
+            if (typeof color !== 'string' || !color) {
+                return color;
+            }
+            const a = Math.min(1, Math.max(0, alpha));
+            const c = color.trim();
+            let m = /^#([0-9a-f]{3,8})$/i.exec(c);
+            if (m) {
+                let h = m[1];
+                if (h.length === 3) {
+                    h = h.split('').map(ch => ch + ch).join('');
+                }
+                if (h.length !== 6 && h.length !== 8) {
+                    return c;
+                }
+                const r = parseInt(h.slice(0, 2), 16);
+                const g = parseInt(h.slice(2, 4), 16);
+                const b = parseInt(h.slice(4, 6), 16);
+                const a0 = h.length === 8 ? parseInt(h.slice(6, 8), 16) / 255 : 1;
+                return `rgba(${r},${g},${b},${(a * a0).toFixed(3)})`;
+            }
+            m = /^rgba?\(([^)]+)\)$/i.exec(c);
+            if (m) {
+                const p = m[1].split(',').map(x => parseFloat(x));
+                if (p.length < 3 || p.some(x => !isFinite(x))) {
+                    return c;
+                }
+                const a0 = p.length === 4 ? p[3] : 1;
+                return `rgba(${p[0]},${p[1]},${p[2]},${(a * a0).toFixed(3)})`;
+            }
+            return c;
         }
 
         // series 級（沒有自帶 itemStyle 的節點）用的預設值：以預設 symbolSize 30 估算
