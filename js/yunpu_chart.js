@@ -53,6 +53,10 @@
             this.originalSymbolSizes = new Map();
             this.originalSeriesBorderWidth = null;
             this.originalBorderWidths = new Map();
+            // 邊框原始顏色：縮放時會把顏色轉成帶 alpha 的 rgba；若每次都從
+            // getOption() 讀（那已經是上次改過的值），alpha 會累乘到 0，
+            // 而且放大也救不回來。所以一律從這份原始值算。
+            this.originalBorderColors = new Map();
             // 每套用一次完整 option 就 +1；縮放的 rAF 回呼靠它判斷是不是過期工作
             this.optionEpoch = 0;
 
@@ -207,6 +211,7 @@
             this.originalSymbolSizes = new Map();
             this.originalNodeLabelFontSizes = new Map();
             this.originalBorderWidths = new Map();
+            this.originalBorderColors = new Map();
             (data || []).forEach(node => {
                 const key = node.name;
                 if (key === undefined || key === null) {
@@ -215,6 +220,7 @@
                 this.originalSymbolSizes.set(key, node.symbolSize || null);
                 this.originalNodeLabelFontSizes.set(key, (node.label && node.label.fontSize) || null);
                 this.originalBorderWidths.set(key, (node.itemStyle && node.itemStyle.borderWidth) || null);
+                this.originalBorderColors.set(key, (node.itemStyle && node.itemStyle.borderColor) || null);
             });
         }
 
@@ -254,12 +260,61 @@
             this.chart.on('restore', this.handleRestore.bind(this));
             // 滑鼠離開圖表就清掉 highlight／blur：焦點狀態卡住時
             // （節點變幾乎透明、類別節點的邊框跟著淡掉）這是唯一的復原點
-            this.chart.on('globalout', () => this.clearFocus());
+            this.chart.on('globalout', () => {
+                this.focusLikely = false;
+                this.clearFocus();
+            });
+            // 記錄「現在有東西被 highlight」，供空白處的重整判斷要不要清
+            this.chart.on('mouseover', params => {
+                if (params && params.componentType === 'series') {
+                    this.focusLikely = true;
+                }
+            });
+            this.bindEmptyAreaFocusReset();
             window.addEventListener('resize', this.throttle(this.handleResize.bind(this), this.throttleDelay));
+        }
+
+        // 游標在「空白處」時不該有任何 blur。
+        //
+        // 快速在節點之間繞圈時，echarts 的 highlight／downplay 會 race，
+        // 有些元素會停在 blur（節點與連線變幾乎透明）；此時游標沒離開圖表，
+        // globalout 不會觸發，所以要在 zr 層自己檢查 hover 目標。
+        bindEmptyAreaFocusReset() {
+            if (!this.chart || this._zrBoundFor === this.chart) {
+                return;
+            }
+            this._zrBoundFor = this.chart;
+            const zr = this.chart.getZr();
+            if (!zr) {
+                return;
+            }
+            zr.on('mousemove', e => {
+                if (!this.focusLikely || this.emptyCheckScheduled) {
+                    return;
+                }
+                this.emptyCheckScheduled = true;
+                const run = () => {
+                    this.emptyCheckScheduled = false;
+                    const hover = zr.handler && zr.handler.findHover
+                        ? zr.handler.findHover(e.offsetX, e.offsetY)
+                        : null;
+                    if (hover && hover.target) {
+                        return; // 還壓在元素上：保留合法的 adjacency blur
+                    }
+                    this.focusLikely = false;
+                    this.clearFocus();
+                };
+                if (typeof requestAnimationFrame === 'function') {
+                    requestAnimationFrame(run);
+                } else {
+                    setTimeout(run, 16);
+                }
+            });
         }
 
         // 清掉 emphasis.focus = adjacency 造成的 highlight／blur 狀態
         clearFocus() {
+            this.focusLikely = false;
             if (!this.chart) {
                 return;
             }
@@ -418,13 +473,16 @@
                 const ratio = (typeof origBorder === 'number' && origBorder > 0)
                     ? origBorder
                     : (this.originalSeriesBorderWidth || 1);
-                const borderColor = node.itemStyle && node.itemStyle.borderColor;
+                // 原始顏色優先（避免 alpha 累乘）；沒有原始值才用節點自帶的
+                const baseBorderColor = this.originalBorderColors.has(key)
+                    ? this.originalBorderColors.get(key)
+                    : (node.itemStyle && node.itemStyle.borderColor);
                 newNode.itemStyle = {
                     ...node.itemStyle,
                     borderWidth: this.nodeBorderWidth(newNode.symbolSize || origSize || 30, zoom, ratio),
-                    borderColor: borderColor
-                        ? this.withAlpha(borderColor, alpha)
-                        : borderColor,
+                    borderColor: baseBorderColor
+                        ? this.withAlpha(baseBorderColor, alpha)
+                        : baseBorderColor,
                 };
                 return newNode;
             });
