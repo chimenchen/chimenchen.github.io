@@ -253,6 +253,8 @@
             this.chart.off('graphRoam');
             this.chart.off('restore');
             this.chart.off('globalout');
+            this.chart.off('mouseover');
+            this.chart.off('mouseout');
 
             this.chart.on('click', this.handleClick.bind(this));
             this.chart.on('dblclick', this.handleDoubleClick.bind(this));
@@ -264,14 +266,64 @@
                 this.focusLikely = false;
                 this.clearFocus();
             });
-            // 記錄「現在有東西被 highlight」，供空白處的重整判斷要不要清
+            // hover 目標一改變就「對帳」：先把所有狀態歸零，再只 highlight 目前這一個。
+            // 快速繞圈時 echarts 的 highlight／downplay 會 race，留下沒被 downplay 的
+            // 元素（節點與連線停在 blur，看起來幾乎透明）；對帳可以保證狀態收斂。
             this.chart.on('mouseover', params => {
-                if (params && params.componentType === 'series') {
-                    this.focusLikely = true;
+                if (!params || params.componentType !== 'series') {
+                    return;
                 }
+                this.hoveredDataIndex = params.dataIndex;
+                this.focusLikely = true;
+                this.scheduleHoverReconcile();
+            });
+            this.chart.on('mouseout', params => {
+                if (!params || params.componentType !== 'series') {
+                    return;
+                }
+                if (this.hoveredDataIndex !== params.dataIndex) {
+                    return; // 已經移到別的節點，交給那次 mouseover 處理
+                }
+                this.hoveredDataIndex = null;
+                this.scheduleHoverReconcile();
             });
             this.bindEmptyAreaFocusReset();
             window.addEventListener('resize', this.throttle(this.handleResize.bind(this), this.throttleDelay));
+        }
+
+        // hover 狀態對帳（見 setupEventListeners 的說明）
+        scheduleHoverReconcile() {
+            if (this.hoverReconcileScheduled) {
+                return;
+            }
+            this.hoverReconcileScheduled = true;
+            const run = () => {
+                this.hoverReconcileScheduled = false;
+                if (!this.chart || this.applyingZoom) {
+                    return;
+                }
+                const idx = this.hoveredDataIndex;
+                // 先全部歸零（清掉任何殘留的 blur），再只 highlight 目前這一個
+                this.clearFocus();
+                if (idx === null || idx === undefined) {
+                    return;
+                }
+                this.focusLikely = true;
+                try {
+                    this.chart.dispatchAction({
+                        type: 'highlight',
+                        seriesIndex: 0,
+                        dataIndex: idx,
+                    });
+                } catch (e) {
+                    // 節點剛好被換掉（重繪中）就交給下一次事件
+                }
+            };
+            if (typeof requestAnimationFrame === 'function') {
+                requestAnimationFrame(run);
+            } else {
+                setTimeout(run, 16);
+            }
         }
 
         // 游標在「空白處」時不該有任何 blur。
