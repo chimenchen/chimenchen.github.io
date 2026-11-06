@@ -1132,7 +1132,7 @@ function __wbg_get_imports() {
         const ret = makeMutClosure(arg0, arg1, 87, __wbg_adapter_28);
         return addHeapObject(ret);
     };
-    imports.wbg.__wbindgen_closure_wrapper1602 = function(arg0, arg1, arg2) {
+    imports.wbg.__wbindgen_closure_wrapper1601 = function(arg0, arg1, arg2) {
         const ret = makeMutClosure(arg0, arg1, 87, __wbg_adapter_31);
         return addHeapObject(ret);
     };
