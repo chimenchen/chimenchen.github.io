@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>韻譜圖：韻類別配色對比</title>
+<style>
+    :root {
+        --bg: #ffffff;
+        --fg: #222222;
+        --muted: #6b7280;
+        --line: #d8d8d8;
+        --dark-bg: #1e1e1e;
+    }
+    body {
+        margin: 0;
+        padding: 1.2rem 1.6rem 3rem;
+        font-family: system-ui, -apple-system, "Noto Sans CJK TC", sans-serif;
+        background: var(--bg);
+        color: var(--fg);
+        line-height: 1.6;
+    }
+    h1 { font-size: 1.25rem; margin: 0 0 0.3rem; }
+    h2 { font-size: 1rem; margin: 1.8rem 0 0.6rem; }
+    .hint { color: var(--muted); font-size: 0.88rem; }
+    .sample-row { font-size: 1.05rem; }
+    .sample { font-size: 18px; letter-spacing: 0.02em; }
+    .card {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 0.7rem 0.9rem;
+        margin-bottom: 0.8rem;
+    }
+    .card-dark { background: var(--dark-bg); color: #eee; border-color: #444; }
+    table { border-collapse: collapse; font-size: 0.86rem; }
+    th, td { border: 1px solid var(--line); padding: 0.2rem 0.5rem; text-align: left; }
+    .mono { font-family: ui-monospace, Consolas, monospace; }
+    .warn { color: #b3261e; }
+    .ok { color: #1b7a3d; }
+    .grid { display: flex; flex-wrap: wrap; gap: 1.2rem; }
+</style>
+</head>
+<body>
+<h1>韻譜圖：韻類別配色對比</h1>
+<p class="hint">
+    這是給人眼看的檢查頁：每個顏色都配上真實的韻字樣本，並列出「最接近的顏色對」與色差 ΔE（CIE76）。
+    ΔE 越小越難分辨；文字用色一般希望最小 ΔE ≥ 20，而且彼此色相不要同屬暖色或同屬冷色。
+</p>
+
+<div id="app"></div>
+
+<script>
+// ── 色彩計算 ─────────────────────────────────────────────
+function hexToRgb(hex) {
+    const h = hex.replace('#', '');
+    return [0, 2, 4].map(i => parseInt(h.slice(i, i + 2), 16) / 255);
+}
+function lin(u) {
+    return u <= 0.04045 ? u / 12.92 : Math.pow((u + 0.055) / 1.055, 2.4);
+}
+function toLab(hex) {
+    const [r0, g0, b0] = hexToRgb(hex);
+    const r = lin(r0), g = lin(g0), b = lin(b0);
+    const X = r * 0.4124 + g * 0.3576 + b * 0.1805;
+    const Y = r * 0.2126 + g * 0.7152 + b * 0.0722;
+    const Z = r * 0.0193 + g * 0.1192 + b * 0.9505;
+    const f = t => (t > 0.008856 ? Math.cbrt(t) : 7.787 * t + 16 / 116);
+    const fx = f(X / 0.95047), fy = f(Y / 1.0), fz = f(Z / 1.08883);
+    return [116 * fy - 16, 500 * (fx - fy), 200 * (fy - fz)];
+}
+function deltaE(a, b) {
+    const p = toLab(a), q = toLab(b);
+    return Math.sqrt(p.reduce((s, v, i) => s + (v - q[i]) ** 2, 0));
+}
+function luminance(hex) {
+    const [r, g, b] = hexToRgb(hex).map(lin);
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+function contrast(hex, bg) {
+    const a = luminance(hex), b = luminance(bg);
+    const hi = Math.max(a, b), lo = Math.min(a, b);
+    return (hi + 0.05) / (lo + 0.05);
+}
+
+// ── 配色方案 ─────────────────────────────────────────────
+// 每個方案都附上真實樣本（取自韻段列表的實際字串），方便直接比較。
+const PALETTES = [
+    {
+        name: '目前使用（1.0.1123）',
+        note: 'Okabe–Ito 系的深色化版本；問題對：07／10（紫紅／紫）、01／04（橙／黃褐）、02／05（天藍／藍）。',
+        colors: [
+            '#a86b00', '#2f7fb8', '#00796b', '#8a7400', '#0b5aa8',
+            '#c0451a', '#a3498a', '#333333', '#4a6b2a', '#7a4b8a',
+        ],
+        samples: ['之部', '魚部', '文部', '元O部', '耕部', '蒸部', '陽部', '侵部', '歌部', '脂部'],
+    },
+    {
+        name: '候選 A：拉開暖冷交替',
+        note: '把暖色（橙／磚紅／洋紅／黃褐）與冷色（藍／青綠／紫／橄榄）穿插排列，讓排序相鄰的類別不易同屬暖色。',
+        colors: [
+            '#a3560f', '#2569a8', '#b03a2e', '#0c7a5a', '#a04a8c',
+            '#4a6b1f', '#8b6f00', '#333333', '#5b5bd6', '#8a3a6b',
+        ],
+        samples: ['之部', '魚部', '文部', '元O部', '耕部', '蒸部', '陽部', '侵部', '歌部', '脂部'],
+    },
+    {
+        name: '候選 B：加大對比與亮度差',
+        note: '同一色系盡量不出現兩次；以亮度差輔助辨識（深／中／淺交錯），對色弱較友善。',
+        colors: [
+            '#8c4a00', '#1f6fb2', '#0f7d5f', '#5a2e8a', '#b3261e',
+            '#4f6b0f', '#c48a00', '#1f1f1f', '#2f8fb0', '#a8347f',
+        ],
+        samples: ['之部', '魚部', '文部', '元O部', '耕部', '蒸部', '陽部', '侵部', '歌部', '脂部'],
+    },
+];
+
+const esc = s => s.replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+
+function pairTable(colors) {
+    const pairs = [];
+    for (let i = 0; i < colors.length; i++) {
+        for (let j = i + 1; j < colors.length; j++) {
+            pairs.push({ i: i + 1, j: j + 1, de: deltaE(colors[i], colors[j]) });
+        }
+    }
+    pairs.sort((x, y) => x.de - y.de);
+    const rows = pairs.slice(0, 6).map(p => {
+        const bad = p.de < 20;
+        return `<tr class="${bad ? 'warn' : 'ok'}">
+            <td class="mono">${String(p.i).padStart(2, '0')} / ${String(p.j).padStart(2, '0')}</td>
+            <td class="mono">${p.de.toFixed(1)}</td>
+            <td>
+                <span style="color:${colors[p.i - 1]}">■</span>
+                <span style="color:${colors[p.j - 1]}">■</span>
+            </td>
+            <td>${bad ? '偏近' : '可'}</td>
+        </tr>`;
+    }).join('');
+    return `<table>
+        <tr><th>顏色對</th><th>ΔE</th><th>色塊</th><th>判斷</th></tr>
+        ${rows}
+    </table>`;
+}
+
+function renderPalette(p) {
+    const lightRows = p.colors.map((c, i) => `
+        <tr>
+            <td class="mono">${String(i + 1).padStart(2, '0')}</td>
+            <td><span style="color:${c}" class="sample">${esc(p.samples[i] || '文部')}</span></td>
+            <td class="mono">${c}</td>
+            <td class="mono">${contrast(c, '#ffffff').toFixed(1)}:1</td>
+        </tr>`).join('');
+
+    const darkRow = p.colors.map((c, i) =>
+        `<span style="color:${c}" class="sample">${esc(p.samples[i] || '文部')}</span>`
+    ).join(' ');
+
+    return `
+    <h2>${esc(p.name)}</h2>
+    <p class="hint">${esc(p.note)}</p>
+    <div class="card">
+        <table>
+            <tr><th>#</th><th>樣本（白底）</th><th>色值</th><th>白底對比</th></tr>
+            ${lightRows}
+        </table>
+    </div>
+    <div class="card card-dark">
+        <div class="hint" style="color:#aaa">深色背景（#1e1e1e）</div>
+        <div>${darkRow}</div>
+    </div>
+    ${pairTable(p.colors)}
+    `;
+}
+
+document.getElementById('app').innerHTML = PALETTES.map(renderPalette).join('');
+
+// 針對使用者回報的那一對（目前方案的 04 與 06）單獨列出
+const cur = PALETTES[0].colors;
+document.getElementById('app').insertAdjacentHTML('beforeend', `
+    <h2>回報的那一對</h2>
+    <p class="hint">「聞」＝文部（第 06 色）、「患O」＝元O部（第 04 色）</p>
+    <div class="card sample-row">
+        <span style="color:${cur[5]}">聞 文部ƏN</span>&nbsp;&nbsp;
+        <span style="color:${cur[3]}">患O 元部ON</span>
+        <div class="hint">ΔE = ${deltaE(cur[3], cur[5]).toFixed(1)}</div>
+    </div>
+`);
+</script>
+</body>
+</html>
