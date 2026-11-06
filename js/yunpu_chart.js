@@ -246,9 +246,15 @@
         // 縮放事件：用 requestAnimationFrame 合併（比 setTimeout 更貼近繪製節奏），
         // 並記錄事件給的 zoom（避免 getOption() 讀到落後的狀態）
         throttledHandleGraphRoam(params) {
-            if (params && typeof params.zoom === 'number') {
-                this.pendingZoom = params.zoom;
+            // 純平移（只有 dx/dy、沒有 zoom）不會改變縮放 → 不必重算節點尺寸。
+            // 依 echarts 實作：pan 也會發 graphRoam，而且 action 會把
+            // series.zoom 用 fC() 夾取後重寫、卻不重算內部的 symbolScale；
+            // 那時若照讀到的 zoom 重算 symbolSize，兩者相乘就會讓節點偶爾變大，
+            // 等下一個縮放事件才恢復。
+            if (!params || typeof params.zoom !== 'number') {
+                return;
             }
+            this.pendingZoom = params.zoom;
             if (this.graphRoamScheduled) {
                 return;
             }
