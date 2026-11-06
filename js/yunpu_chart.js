@@ -14,6 +14,7 @@
 
     // echarts 約 1MB，首屏不阻塞加載：第一次繪圖時才動態插入 <script>。
     let echartsLoadingPromise = null;
+    let lastChartInstance = null;
 
     function ensureEchartsLoaded() {
         if (window.echarts) {
@@ -376,6 +377,59 @@
             } catch (e) {
                 // 舊版 echarts 沒有 unfocusNodeAdjacency，忽略即可
             }
+            // dispatchAction 走的是 echarts 自己的狀態帳本；快速 hover 時它會漏掉
+            // 某些元素（節點與連線停在 blur）。這裡直接對每個圖形元素做硬重置。
+            this.hardResetStates();
+        }
+
+        // 直接把所有圖形元素的狀態清回 normal
+        hardResetStates() {
+            const zr = this.chart && this.chart.getZr && this.chart.getZr();
+            if (!zr || !zr.storage || typeof zr.storage.getDisplayList !== 'function') {
+                return;
+            }
+            let reset = 0;
+            const list = zr.storage.getDisplayList(true) || [];
+            for (let i = 0; i < list.length; i++) {
+                const el = list[i];
+                if (!el) {
+                    continue;
+                }
+                try {
+                    if (typeof el.clearStates === 'function' && el.hasState && el.hasState()) {
+                        el.clearStates(false);
+                        reset += 1;
+                    }
+                } catch (e) {
+                    // 忽略單一元素的失敗
+                }
+            }
+            if (reset > 0 && typeof zr.refresh === 'function') {
+                zr.refresh();
+            }
+        }
+
+        // 除錯用：在 console 執行 window.yunpuChartDebug() 看還有多少元素停在非 normal 狀態
+        debugStates() {
+            const zr = this.chart && this.chart.getZr && this.chart.getZr();
+            if (!zr || !zr.storage) {
+                return 'no chart';
+            }
+            const list = zr.storage.getDisplayList(true) || [];
+            const stuck = [];
+            list.forEach(el => {
+                if (!el || !el.currentStates || !el.currentStates.length) {
+                    return;
+                }
+                const ecData = el.__ecData || {};
+                stuck.push({
+                    states: el.currentStates.slice(),
+                    type: el.type,
+                    name: (ecData.dataIndex !== undefined ? `#${ecData.dataIndex}` : '') +
+                        (el.style && el.style.opacity !== undefined ? ` opacity=${el.style.opacity}` : ''),
+                });
+            });
+            return { total: list.length, stuckCount: stuck.length, stuck: stuck.slice(0, 20) };
         }
 
         // 縮放事件：用 requestAnimationFrame 合併（比 setTimeout 更貼近繪製節奏），
@@ -791,6 +845,7 @@
         // logChartColors(chartDom);
         const chart = new YunpuChart(chartDom);
         await chart.init(data.option, createNewInstance);
+        lastChartInstance = chart; // 除錯用（yunpuChart.debugStates）
         return chart;
     }
 
@@ -988,6 +1043,10 @@
         createOrUpdateChart: createOrUpdateChart,
         resizeChart: resizeChart,
         createRelationChart: createRelationChart,
+        // 除錯：console 執行 yunpuChart.debugStates() 可看有沒有元素卡在非 normal 狀態
+        debugStates: function() {
+            return lastChartInstance ? lastChartInstance.debugStates() : 'no instance';
+        },
     };
 
 })(window);
