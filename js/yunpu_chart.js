@@ -164,7 +164,10 @@
             // 在設置選項之前應用縮放
             this.applyZoomToOption(option, this.currentZoom);
             this.optionEpoch += 1;
-            this.chart.setOption(option, createNewInstance);
+            // 一律整份替換（notMerge=true）：
+            // 預覽切換（篇 → 作者 → 全部）時節點集合會變少，merge 會把舊節點留著，
+            // 看起來就像「關掉膠囊沒有生效」。縮放已由上面的 applyZoomToOption 重新套用。
+            this.chart.setOption(option, true);
         }
 
         // 預處理圖表選項
