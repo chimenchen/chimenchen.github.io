@@ -171,6 +171,9 @@
             }
 
             // 在設置選項之前應用縮放
+            // 在「被 highlight／blur 的狀態下」換資料，狀態會黏在新元素上
+            // （節點一直半透明、邊框消失），所以先清掉焦點
+            this.clearFocus();
             this.applyZoomToOption(option, this.currentZoom);
             this.optionEpoch += 1;
             // 一律整份替換（notMerge=true）：
@@ -235,12 +238,37 @@
         }
 
         // 設置事件監聽器
+        //
+        // 每次生成都會呼叫這裡，若只 on 不 off，監聽器會一份一份累積
+        // （N 次生成＝同一個事件跑 N 次），狀態機就容易被弄亂。
         setupEventListeners() {
+            this.chart.off('click');
+            this.chart.off('dblclick');
+            this.chart.off('graphRoam');
+            this.chart.off('restore');
+            this.chart.off('globalout');
+
             this.chart.on('click', this.handleClick.bind(this));
             this.chart.on('dblclick', this.handleDoubleClick.bind(this));
             this.chart.on('graphRoam', this.throttledHandleGraphRoam.bind(this));
             this.chart.on('restore', this.handleRestore.bind(this));
+            // 滑鼠離開圖表就清掉 highlight／blur：焦點狀態卡住時
+            // （節點變幾乎透明、類別節點的邊框跟著淡掉）這是唯一的復原點
+            this.chart.on('globalout', () => this.clearFocus());
             window.addEventListener('resize', this.throttle(this.handleResize.bind(this), this.throttleDelay));
+        }
+
+        // 清掉 emphasis.focus = adjacency 造成的 highlight／blur 狀態
+        clearFocus() {
+            if (!this.chart) {
+                return;
+            }
+            try {
+                this.chart.dispatchAction({ type: 'downplay', seriesIndex: 0 });
+                this.chart.dispatchAction({ type: 'unfocusNodeAdjacency', seriesIndex: 0 });
+            } catch (e) {
+                // 舊版 echarts 沒有 unfocusNodeAdjacency，忽略即可
+            }
         }
 
         // 縮放事件：用 requestAnimationFrame 合併（比 setTimeout 更貼近繪製節奏），
@@ -328,6 +356,7 @@
         // 否則會把 roam 的 zoom/center 一併蓋掉 —— 這就是先前「跑飛」的主因）
         updateChartZoom(absoluteZoom) {
             const data = this.updateNodeSizes(this.chart.getOption().series[0].data, absoluteZoom);
+            this.clearFocus();
             this.applyingZoom = true;
             try {
                 this.chart.setOption(
