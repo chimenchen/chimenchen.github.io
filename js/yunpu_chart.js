@@ -58,6 +58,9 @@
             // getOption() 讀（那已經是上次改過的值），alpha 會累乘到 0，
             // 而且放大也救不回來。所以一律從這份原始值算。
             this.originalBorderColors = new Map();
+            // 邊（links）原始線寬：縮放時要補償，否則「分開」那種細邊
+            // 在 zoom 0.3 會變成 0.3px，幾乎看不見（而那正是最需要看見的資訊）
+            this.originalLinkWidths = [];
             // 每套用一次完整 option 就 +1；縮放的 rAF 回呼靠它判斷是不是過期工作
             this.optionEpoch = 0;
 
@@ -202,6 +205,10 @@
             if (option.series && option.series[0]) {
                 this.originalSeriesLabelFontSize = option.series[0].label && option.series[0].label.fontSize || 12;
                 this.saveNodeSizes(option.series[0].data);
+                this.originalLinkWidths = (option.series[0].links || []).map(
+                    link => (link && link.lineStyle && typeof link.lineStyle.width === 'number')
+                        ? link.lineStyle.width : 1
+                );
                 this.originalSeriesBorderWidth = option.series[0].itemStyle.borderWidth || 1;
                 this.originalSeriesBorderColor = option.series[0].itemStyle.borderColor || null;
             }
@@ -213,6 +220,9 @@
             this.originalNodeLabelFontSizes = new Map();
             this.originalBorderWidths = new Map();
             this.originalBorderColors = new Map();
+            // 邊（links）原始線寬：縮放時要補償，否則「分開」那種細邊
+            // 在 zoom 0.3 會變成 0.3px，幾乎看不見（而那正是最需要看見的資訊）
+            this.originalLinkWidths = [];
             (data || []).forEach(node => {
                 const key = node.name;
                 if (key === undefined || key === null) {
@@ -518,6 +528,7 @@
         updateChartZoom(absoluteZoom) {
             const data = this.updateNodeSizes(this.chart.getOption().series[0].data, absoluteZoom);
             this.clearFocus();
+            const links = this.scaledLinkWidths(absoluteZoom);
             this.applyingZoom = true;
             try {
                 this.chart.setOption(
@@ -525,6 +536,7 @@
                         series: [
                             {
                                 data: data,
+                                ...(links ? { links } : {}),
                                 label: {
                                     fontSize: this.updateFontSize(
                                         this.originalSeriesLabelFontSize,
@@ -549,6 +561,33 @@
             } finally {
                 this.applyingZoom = false;
             }
+        }
+
+        // 邊寬度的縮放補償
+        //
+        // 邊寬在 canvas 座標，會隨 roam 縮放一起縮小；「分開」只有 ~1px，
+        // 縮到 0.3 就快看不見。這裡做「部分補償」：canvas 寬 = 原始 / sqrt(zoom)，
+        // 等效螢幕寬度 ∝ sqrt(zoom)（zoom 0.3 時仍有原始的 55%，而不是 30%）。
+        // 一律從原始值計算，避免重複套用後累乘。
+        scaledLinkWidths(zoom) {
+            const src = this.originalLinkWidths;
+            if (!src || !src.length) {
+                return null;
+            }
+            const z = Math.max(0.05, Number(zoom) || 1);
+            const k = 1 / Math.sqrt(z);
+            const links = this.chart.getOption().series[0].links || [];
+            return links.map((link, i) => {
+                const base = typeof src[i] === 'number' ? src[i] : 1;
+                const w = Math.max(0.35, base * k);
+                return {
+                    ...link,
+                    lineStyle: {
+                        ...(link.lineStyle || {}),
+                        width: Math.round(w * 100) / 100,
+                    },
+                };
+            });
         }
 
         // 更新節點大小
