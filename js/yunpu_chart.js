@@ -489,10 +489,8 @@
                 return;
             }
             const next = Math.max(this.minZoom, Math.min(this.maxZoom, currentView));
-            // 變化太小就不重繪（避免連續縮放時每幀 setOption）。
-            // 3% → 8%：滾輪縮放時少掉大量「只為幾 % 而重設資料」的動作，
-            // 這些動作會讓 force 佈局重新起算，是縮放抖動的主要來源。
-            if (Math.abs(next - this.currentZoom) / Math.max(0.001, this.currentZoom) < 0.08) {
+            // 變化太小就不重繪（避免連續縮放時每幀 setOption）
+            if (Math.abs(next - this.currentZoom) / Math.max(0.001, this.currentZoom) < 0.03) {
                 return;
             }
             this.currentZoom = next;
