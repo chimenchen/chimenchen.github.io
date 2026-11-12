@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="zh">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>韻譜圖</title>
+
+    <style>
+      :root {
+        color-scheme: light dark;
+      }
+      body {
+        background-color: #fff;
+        color: #333;
+        margin: 0;
+        padding: 0;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Helvetica Neue", "Arial", "Noto Sans", "Microsoft YaHei", "PingFang SC", "Hiragino Sans GB", "Heiti SC", sans-serif;
+      }
+      @media (prefers-color-scheme: dark) {
+        body {
+          background-color: #222;
+          color: #e0e0e0;
+        }
+      }
+      #splash {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: var(--color-background);
+        padding-top: 4rem;
+        transition: opacity 200ms ease, visibility 200ms;
+        -webkit-transition: opacity 200ms ease, visibility 200ms;
+        visibility: hidden;
+        opacity: 0;
+    }
+    body.loading #splash {
+        visibility: visible;
+        opacity: 1;
+    }
+    #splash > * {
+        width: 10rem;
+        max-width: 480px;
+        margin: 2rem auto;
+        display: block;
+        text-align: center;
+    }
+    body.loading > *:not(#splash) {
+        visibility: hidden;
+    }
+    </style>
+
+    <!-- 共用脚本文件 -->
+    <!--<script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.4.2/echarts.min.js"></script>-->
+    <!-- <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script> -->
+    <!-- echarts 按需加載（見 js/yunpu_chart.js 的 ensureEchartsLoaded）：首屏不阻塞 -->
+    <script src="/js/yunpu_chart.js?v=__ASSET_VERSION__"></script>
+    <script src="/js/yunpu_page.js?v=__ASSET_VERSION__"></script>
+    <script src="/js/yunpu_zi_tip.js?v=__ASSET_VERSION__"></script>
+
+    <!-- 複製整個 js 目錄 -->
+    
+    <!-- 按需加載的韻譜數據（生成前才 fetch，見 yunpu-core/src/yunpu/data_src.rs） -->
+    
+
+    <!-- 複製 favicon -->
+    
+    
+
+    
+<script type="module">
+import init, * as bindings from '/yunpu-web-2f50bab16bece267.js';
+const wasm = await init({ module_or_path: '/yunpu-web-2f50bab16bece267_bg.wasm' });
+
+
+window.wasmBindings = bindings;
+
+
+dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
+
+</script>
+
+    <script nomodule>
+      // 不支持 ES Modules 的瀏覽器：說明原因，避免一直停在「正在思考……」
+      document.addEventListener('DOMContentLoaded', function () {
+        var msg = '您的瀏覽器版本過舊（不支持 WebAssembly / 新版 JavaScript），無法運行本站。'
+          + '請改用最新版的 Chrome、Edge 或 Firefox（iPhone 請用 Safari）。';
+        var s = document.getElementById('splash-status');
+        if (s) { s.textContent = msg; }
+        else if (document.body) { document.body.textContent = msg; }
+      });
+    </script>
+
+    <!-- RELEASE MODE -->
+    <!--[if RELEASE]>
+    <link rel="preload" href="/yunpu-web_bg.wasm?v=__ASSET_VERSION__" as="fetch" type="application/wasm" crossorigin="">
+    <link rel="modulepreload" href="/yunpu-web.js?v=__ASSET_VERSION__">
+    <script type="module">
+      import init from '/yunpu-web.js?v=__ASSET_VERSION__';
+
+      // 下載並啟動 wasm：顯示下載進度；失敗時給出明確提示。
+      async function startApp() {
+        const statusEl = document.getElementById('splash-status');
+        const progressEl = document.getElementById('splash-progress');
+        const setStatus = (text) => {
+          if (statusEl) statusEl.textContent = text;
+        };
+        try {
+          if (typeof WebAssembly !== 'object') {
+            throw new Error('此瀏覽器不支持 WebAssembly');
+          }
+          setStatus('正在下載程序……');
+          const response = await fetch('/yunpu-web_bg.wasm?v=__ASSET_VERSION__', { credentials: 'omit' });
+          if (!response.ok) {
+            throw new Error('下載失敗（HTTP ' + response.status + '）');
+          }
+          let bytes;
+          if (response.body && response.body.getReader) {
+            const reader = response.body.getReader();
+            const chunks = [];
+            let received = 0;
+            for (;;) {
+              const step = await reader.read();
+              if (step.done) break;
+              chunks.push(step.value);
+              received += step.value.length;
+              setStatus('正在下載程序…… ' + (received / 1048576).toFixed(1) + ' MB');
+            }
+            bytes = new Uint8Array(received);
+            let offset = 0;
+            for (const chunk of chunks) {
+              bytes.set(chunk, offset);
+              offset += chunk.length;
+            }
+          } else {
+            bytes = new Uint8Array(await response.arrayBuffer());
+          }
+          if (!WebAssembly.validate(bytes)) {
+            throw new Error('此瀏覽器不支持本程序所需的 WebAssembly 特性，請升級瀏覽器（建議 Chrome 96 以上 / Safari 15 以上）');
+          }
+          setStatus('正在初始化……');
+          await init({ module_or_path: bytes });
+          try { sessionStorage.removeItem('__assetReload'); } catch (e) { /* 忽略 */ }
+          // 通知外層首頁（iframe 宿主）收起「正在搬磚」：wasm 已就緒
+          try {
+            var notifyReady = function () {
+              if (window.parent && window.parent !== window) {
+                window.parent.postMessage({ type: 'app-ready' }, '*');
+              }
+            };
+            requestAnimationFrame(function () { requestAnimationFrame(notifyReady); });
+          } catch (e) { /* 忽略 */ }
+        } catch (error) {
+          console.error(error);
+          // 加載失敗：可能是本地緩存 / Service Worker 停留在「半新半舊」的狀態
+          // （例如部署過程中緩存了缺失或損壞的文件）。清一次站點緩存並刷新。
+          // 只做一次（sessionStorage 標記），避免失敗時無限刷新。
+          try {
+            if (!sessionStorage.getItem('__cacheReset')) {
+              sessionStorage.setItem('__cacheReset', '1');
+              if (window.caches && caches.keys) {
+                const keys = await caches.keys();
+                await Promise.all(keys.map(function (k) { return caches.delete(k); }));
+              }
+              if (navigator.serviceWorker && navigator.serviceWorker.getRegistrations) {
+                const regs = await navigator.serviceWorker.getRegistrations();
+                await Promise.all(regs.map(function (r) { return r.unregister(); }));
+              }
+              location.reload();
+              return;
+            }
+          } catch (e) { /* 忽略，繼續顯示錯誤 */ }
+          // 若 JS 膠水與 wasm 版本不匹配（LinkError），自動刷新一次以取得一致的資源
+          const msg = String(error && error.message ? error.message : error);
+          if (/LinkError|import object field/i.test(msg)) {
+            try {
+              if (!sessionStorage.getItem('__assetReload')) {
+                sessionStorage.setItem('__assetReload', '1');
+                location.reload();
+                return;
+              }
+            } catch (e) { /* 忽略 */ }
+          }
+          if (progressEl) progressEl.remove();
+          setStatus('加載失敗：' + (error && error.message ? error.message : error) + '。請刷新頁面重試，或更換瀏覽器。');
+        }
+      }
+
+      // ── 版本自癒 ────────────────────────────────────────────────────────
+      // Firefox 直接開 /duyin（書籤）時不經過首頁，因此不會註冊／更新 Service Worker，
+      // 舊快取可能永遠不換。這裡每次載入都比對「頁面資源版本」與「快取版本」，
+      // 不一致就清掉舊快取並重載一次（sessionStorage 標記避免迴圈）。
+      (async function selfHealAssets() {
+        if (!('serviceWorker' in navigator)) return;
+        const wants = Array.from(document.querySelectorAll('script[src*="?v="]'))
+          .map(function (s) { return (s.src.match(/[?&]v=([^&]+)/) || [])[1]; })
+          .filter(Boolean);
+        if (!wants.length) return;
+        const want = wants[0];
+        try {
+          const reg = await navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' });
+          reg.update().catch(function () {});
+          if (!window.caches || !caches.keys) return;
+          const keys = await caches.keys();
+          const stale = keys.filter(function (k) { return k.indexOf('-' + want) < 0; });
+          if (!stale.length) return;
+          const flag = '__swPurge_' + want;
+          if (sessionStorage.getItem(flag)) return;
+          sessionStorage.setItem(flag, '1');
+          await Promise.all(stale.map(function (k) { return caches.delete(k); }));
+          location.reload();
+        } catch (e) { /* 自癒失敗不影響使用 */ }
+      })();
+
+      startApp();
+    </script>
+    <![endif]-->
+
+    <base target="_parent">
+  <link rel="modulepreload" href="/yunpu-web-2f50bab16bece267.js" crossorigin="anonymous" integrity="sha384-j2m4numOzo78LS9tHIicf6hrf1jXOwwlkBtqMPgENTjWQoLv1qFPbFX/fPeUPHC4"><link rel="preload" href="/yunpu-web-2f50bab16bece267_bg.wasm" crossorigin="anonymous" integrity="sha384-3qv6Xk7vcZZB2izQtF6spqTEjiwjmko5Z3TfaXb5Pw8MKqjw/R39257dUqBT0BQo" as="fetch" type="application/wasm"></head>
+
+  <body class="loading">
+    <div id="splash">
+      <div>韻譜系統<br>正在思考……</div>
+      <progress id="splash-progress"></progress>
+      <div id="splash-status" style="width: 20rem; font-size: 0.8rem; line-height: 1.5;"></div>
+    </div>
+  </body>
+</html>
